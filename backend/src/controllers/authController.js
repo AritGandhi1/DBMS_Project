@@ -5,7 +5,8 @@ const env = require("../config/env");
 const {
   createStudentUser,
   findUserForLogin,
-  findStudentByCollegeEmail
+  findStudentByCollegeEmail,
+  findStudentById
 } = require("../services/userStore");
 
 function buildUserResponse(user) {
@@ -25,10 +26,22 @@ function signAccessToken(user) {
 
 async function register(req, res, next) {
   try {
-    const { studentId, name, batch, email, password } = req.body;
+    const { studentId, name, batch, email, password, personalEmail, phone, dob } = req.body;
+    const normalizedStudentId = String(studentId || "").trim();
+    const normalizedEmail = String(email || "").trim().toLowerCase();
+    const normalizedPersonalEmail = personalEmail ? String(personalEmail).trim().toLowerCase() : null;
+    const normalizedPhone = phone ? String(phone).trim() : null;
+    const normalizedDob = dob ? String(dob).trim() : null;
+    const batchNumber = Number(batch);
 
-    if (!studentId || !name || !batch || !email || !password) {
+    if (!normalizedStudentId || !name || !batch || !normalizedEmail || !password) {
       const error = new Error("studentId, name, batch, email, and password are required");
+      error.status = 400;
+      throw error;
+    }
+
+    if (Number.isNaN(batchNumber)) {
+      const error = new Error("batch must be a valid number");
       error.status = 400;
       throw error;
     }
@@ -39,8 +52,18 @@ async function register(req, res, next) {
       throw error;
     }
 
-    const existingUser = await findStudentByCollegeEmail(email);
-    if (existingUser) {
+    const [existingStudent, existingEmail] = await Promise.all([
+      findStudentById(normalizedStudentId),
+      findStudentByCollegeEmail(normalizedEmail)
+    ]);
+
+    if (existingStudent) {
+      const error = new Error("studentId is already registered");
+      error.status = 409;
+      throw error;
+    }
+
+    if (existingEmail) {
       const error = new Error("email is already registered");
       error.status = 409;
       throw error;
@@ -48,11 +71,14 @@ async function register(req, res, next) {
 
     const passwordHash = await bcrypt.hash(String(password), 10);
     const user = await createStudentUser({
-      studentId,
+      studentId: normalizedStudentId,
       name,
-      batch,
-      email,
-      passwordHash
+      batch: batchNumber,
+      email: normalizedEmail,
+      passwordHash,
+      personalEmail: normalizedPersonalEmail,
+      phone: normalizedPhone,
+      dob: normalizedDob
     });
     const token = signAccessToken(user);
 

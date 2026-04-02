@@ -4,17 +4,50 @@ function normalizeEmail(email) {
   return String(email).trim().toLowerCase();
 }
 
-async function createStudentUser({ studentId, name, batch, email, passwordHash }) {
+async function createStudentUser({
+  studentId,
+  name,
+  batch,
+  email,
+  passwordHash,
+  personalEmail = null,
+  phone = null,
+  dob = null,
+  advisorId = null
+}) {
+  const normalizedStudentId = String(studentId).trim();
   const normalizedEmail = normalizeEmail(email);
+  const normalizedPersonalEmail = personalEmail ? normalizeEmail(personalEmail) : null;
+  const normalizedPhone = phone ? String(phone).trim() : null;
+  const normalizedDob = dob ? String(dob).trim() : null;
 
   await pool.execute(
-    `INSERT INTO STUDENT (student_id, password, name, batch, college_email)
-     VALUES (?, ?, ?, ?, ?)`,
-    [String(studentId).trim(), passwordHash, String(name).trim(), Number(batch), normalizedEmail]
+    `INSERT INTO STUDENT (
+        student_id,
+        password,
+        name,
+        batch,
+        college_email,
+        personal_email,
+        phone,
+        dob,
+        advisor_id
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      normalizedStudentId,
+      passwordHash,
+      String(name).trim(),
+      Number(batch),
+      normalizedEmail,
+      normalizedPersonalEmail,
+      normalizedPhone,
+      normalizedDob,
+      advisorId
+    ]
   );
 
   return {
-    id: String(studentId).trim(),
+    id: normalizedStudentId,
     role: "STUDENT",
     name: String(name).trim(),
     email: normalizedEmail,
@@ -112,6 +145,31 @@ async function findStudentByCollegeEmail(email) {
   };
 }
 
+async function findStudentById(studentId) {
+  const value = String(studentId || "").trim();
+
+  const [rows] = await pool.execute(
+    `SELECT student_id AS id,
+            name,
+            college_email AS email,
+            password AS passwordHash,
+            batch
+     FROM STUDENT
+     WHERE student_id = ?
+     LIMIT 1`,
+    [value]
+  );
+
+  if (!rows[0]) {
+    return null;
+  }
+
+  return {
+    ...rows[0],
+    role: "STUDENT"
+  };
+}
+
 async function findUserByIdAndRole(id, role) {
   if (role === "STUDENT") {
     const [rows] = await pool.execute(
@@ -165,5 +223,6 @@ module.exports = {
   createStudentUser,
   findUserForLogin,
   findStudentByCollegeEmail,
+  findStudentById,
   findUserByIdAndRole
 };

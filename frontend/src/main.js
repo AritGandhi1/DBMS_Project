@@ -51,6 +51,16 @@ app.innerHTML = `
     </section>
 
     <section class="panel">
+      <h2>Student Details</h2>
+      <div class="row">
+        <button id="studentDetailsBtn" type="button">View My Details</button>
+        <button id="studentCoursesBtn" type="button">View My Courses</button>
+        <button id="studentTranscriptBtn" type="button">View Transcript</button>
+        <button id="studentAttendanceBtn" type="button">View Attendance</button>
+      </div>
+    </section>
+
+    <section class="panel">
       <h2>Response</h2>
       <pre id="responseBox">Ready.</pre>
     </section>
@@ -173,6 +183,22 @@ document.getElementById("meBtn").addEventListener("click", async () => {
 document.getElementById("logoutBtn").addEventListener("click", () => {
   clearToken();
   setResponse("Token cleared.");
+});
+
+document.getElementById("studentDetailsBtn").addEventListener("click", async () => {
+  await callApi({ method: "get", url: "/student/me" });
+});
+
+document.getElementById("studentCoursesBtn").addEventListener("click", async () => {
+  await callApi({ method: "get", url: "/student/courses" });
+});
+
+document.getElementById("studentTranscriptBtn").addEventListener("click", async () => {
+  await callApi({ method: "get", url: "/student/transcript" });
+});
+
+document.getElementById("studentAttendanceBtn").addEventListener("click", async () => {
+  await callApi({ method: "get", url: "/student/attendance" });
 });
 
 renderTokenState();
