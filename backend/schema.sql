@@ -22,13 +22,13 @@ DROP TABLE IF EXISTS ATTENDANCE;
 DROP TABLE IF EXISTS ENROLLMENT;
 DROP TABLE IF EXISTS MARKS;
 DROP TABLE IF EXISTS COURSE_OFFERING;
-DROP TABLE IF EXISTS NOTIFICATION;
 DROP TABLE IF EXISTS COURSE;
-DROP TABLE IF EXISTS PAYMENT;
-DROP TABLE IF EXISTS TA_ASSIGNMENT;
+DROP TABLE IF EXISTS NOTIFICATION;
 DROP TABLE IF EXISTS LEAVE_APPLICATION;
+DROP TABLE IF EXISTS TA_ASSIGNMENT;
 DROP TABLE IF EXISTS EXAM;
 DROP TABLE IF EXISTS DOCUMENT;
+DROP TABLE IF EXISTS PAYMENT;
 DROP TABLE IF EXISTS STUDENT;
 DROP TABLE IF EXISTS FACULTY;
 DROP TABLE IF EXISTS ADMIN;
@@ -49,6 +49,7 @@ CREATE TABLE ADMIN (
 CREATE TABLE FACULTY (
     faculty_id VARCHAR(10) PRIMARY KEY,
     password VARCHAR(100) NOT NULL,
+    role ENUM('Faculty', 'HOD', 'PIC_TT', 'PIC_CDC', 'PIC_EXAM') DEFAULT 'Faculty',
     name VARCHAR(100) NOT NULL,
     email VARCHAR(100) UNIQUE,
     phone VARCHAR(15),
@@ -329,7 +330,7 @@ CREATE TABLE PAYMENT (
 -- =========================================
 CREATE TABLE NOTIFICATION (
     notification_id INT AUTO_INCREMENT PRIMARY KEY,
-    student_id VARCHAR(10),
+    id VARCHAR(10) NOT NULL,
 
     message TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -625,13 +626,14 @@ INSERT INTO PAYMENT (payment_id, student_id, payment_type, term_number, amount, 
     (3, '23IT01', 'Tuition', 1, 46000.00, '2025-08-16', 'Paid'),
     (4, '23EC01', 'Tuition', 2, 45500.00, '2026-01-16', 'Pending');
 
-INSERT INTO NOTIFICATION (notification_id, student_id, message, created_at) VALUES
+INSERT INTO NOTIFICATION (notification_id, id, message, created_at) VALUES
     (1, '23CS01', 'Mid-semester exam schedule published.', '2026-04-02 09:00:00'),
     (2, '23CS02', 'Fee payment reminder for Spring term.', '2026-01-20 12:00:00'),
     (3, '23IT01', 'Project review scheduled for next week.', '2025-10-02 10:00:00'),
     (4, '23EC01', 'Lab timetable updated for term 2.', '2026-02-03 15:00:00'),
     (5, 'CS101', 'Dummy course notification: CS101 quiz this Friday.', '2026-04-03 08:30:00'),
-    (6, '23CS01', 'Dummy personal notification for testing red dot.', '2026-04-03 09:15:00');
+    (6, '23CS01', 'Dummy personal notification for testing red dot.', '2026-04-03 09:15:00'),
+    (7, 'CS01', 'Dummy FA notification: Meet your advisor this week.', '2026-04-03 10:00:00');
 
 INSERT INTO INTERNSHIP_OPENING (opening_id, company, role, stipend, duration_months, is_active) VALUES
     (1, 'InnovaTech', 'Software Intern', 18000.00, 3.0, 1),

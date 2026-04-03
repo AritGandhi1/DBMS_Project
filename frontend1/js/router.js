@@ -10,7 +10,9 @@ const pages = [
   TranscriptPage,
   ResultPage,
   AttendancePage,
-  FeedbackPage
+  ExamPage,
+  FeedbackPage,
+  LeavePage
 ];
 
 const Router = {
@@ -159,7 +161,7 @@ const Router = {
   renderHeader(activeRoute) {
     const user = Auth.getUser();
     const activeClass = (routeName) => activeRoute === routeName ? 'active' : '';
-    const academicsActive = ['courses', 'timetable', 'transcript', 'result', 'attendance', 'feedback'].includes(activeRoute);
+    const academicsActive = ['courses', 'timetable', 'transcript', 'result', 'attendance', 'exam', 'feedback'].includes(activeRoute);
     const cdcActive = ['internships', 'placements'].includes(activeRoute);
 
     return `
@@ -174,6 +176,7 @@ const Router = {
               <div class="nav-dropdown-menu">
                 <a href="#/courses" class="nav-link ${activeClass('courses')}">My Courses</a>
                 <a href="#/timetable" class="nav-link ${activeClass('timetable')}">Timetable</a>
+                <a href="#/exam" class="nav-link ${activeClass('exam')}">Exam Schedule</a>
                 <a href="#/transcript" class="nav-link ${activeClass('transcript')}">Marks</a>
                 <a href="#/result" class="nav-link ${activeClass('result')}">Result</a>
                 <a href="#/attendance" class="nav-link ${activeClass('attendance')}">Attendance</a>
@@ -187,6 +190,7 @@ const Router = {
                 <a href="#/placements" class="nav-link ${activeClass('placements')}">Placements</a>
               </div>
             </div>
+            <a href="#/leave" class="nav-link ${activeClass('leave')}">Leave</a>
           </div>
           <div class="mobile-nav-wrap">
             <button class="mobile-menu-btn" onclick="Router.toggleMobileMenu()" aria-label="Open navigation menu">
@@ -202,6 +206,7 @@ const Router = {
                 <div class="mobile-submenu">
                   <button class="mobile-menu-item ${activeClass('courses')}" onclick="Router.goToRoute('courses')">My Courses</button>
                   <button class="mobile-menu-item ${activeClass('timetable')}" onclick="Router.goToRoute('timetable')">Timetable</button>
+                  <button class="mobile-menu-item ${activeClass('exam')}" onclick="Router.goToRoute('exam')">Exam Schedule</button>
                   <button class="mobile-menu-item ${activeClass('transcript')}" onclick="Router.goToRoute('transcript')">Marks</button>
                   <button class="mobile-menu-item ${activeClass('result')}" onclick="Router.goToRoute('result')">Result</button>
                   <button class="mobile-menu-item ${activeClass('attendance')}" onclick="Router.goToRoute('attendance')">Attendance</button>
@@ -215,6 +220,7 @@ const Router = {
                   <button class="mobile-menu-item ${activeClass('placements')}" onclick="Router.goToRoute('placements')">Placements</button>
                 </div>
               </details>
+              <button class="mobile-menu-item ${activeClass('leave')}" onclick="Router.goToRoute('leave')">Leave</button>
             </div>
           </div>
           <div class="user-info">

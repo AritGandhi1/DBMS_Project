@@ -6,6 +6,13 @@ const DashboardPage = {
       const studentDetails = await API.getStudentDetails();
       const student = studentDetails.student;
 
+      const taSection = student.isTA ? `
+            <div class="stat-card info">
+              <div class="stat-label">TA Role</div>
+              <div class="stat-value" id="taRole" style="font-size: 18px; color: #333;">-</div>
+            </div>
+      ` : '';
+
       return `
         <div class="container">
           <div class="card">
@@ -55,6 +62,7 @@ const DashboardPage = {
               <div class="stat-label">Available Enrollments</div>
               <div class="stat-value" id="availableEnroll">-</div>
             </div>
+            ${taSection}
           </div>
         </div>
       `;
@@ -77,6 +85,11 @@ const DashboardPage = {
       document.getElementById("currentTerm").textContent = enrollment.currentTermNumber ? `Term ${enrollment.currentTermNumber}` : "N/A";
       document.getElementById("advisorName").textContent = studentDetails.student?.advisorName || studentDetails.student?.advisorId || "N/A";
       document.getElementById("availableEnroll").textContent = enrollment.enrollmentOptions?.length || 0;
+      
+      // Display TA role if student is a TA
+      if (studentDetails.student?.isTA && document.getElementById("taRole")) {
+        document.getElementById("taRole").textContent = studentDetails.student?.taRole || "TA";
+      }
     } catch (error) {
       console.error("Error loading dashboard stats:", error);
     }

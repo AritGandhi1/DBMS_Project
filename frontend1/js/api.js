@@ -64,6 +64,14 @@ class API {
     return this.call("POST", "/student/enroll", { offeringId });
   }
 
+  static async getTAEnrollmentOptions() {
+    return this.call("GET", "/student/ta-enrollment-options");
+  }
+
+  static async applyTAEnrollment(facultyId) {
+    return this.call("POST", "/student/ta-enroll", { facultyId });
+  }
+
   static async getTranscript() {
     return this.call("GET", "/student/transcript");
   }
@@ -74,6 +82,10 @@ class API {
 
   static async getAttendance() {
     return this.call("GET", "/student/attendance");
+  }
+
+  static async getExamSchedule() {
+    return this.call("GET", "/student/exams");
   }
 
   static async getInternships() {
@@ -106,5 +118,14 @@ class API {
 
   static async submitFeedback(offeringId, rating, comment) {
     return this.call("POST", "/student/feedback/submit", { offeringId, rating, comment });
+  }
+
+  // Leave Application endpoints
+  static async submitLeaveApplication(leaveData) {
+    return this.call("POST", "/student/leave-application/apply", leaveData);
+  }
+
+  static async getPastLeaveApplications() {
+    return this.call("GET", "/student/leave-application/past");
   }
 }

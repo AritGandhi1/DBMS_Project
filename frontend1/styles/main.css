@@ -573,7 +573,7 @@ tbody tr:hover {
 /* Dashboard Grid */
 .dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 20px;
   margin-bottom: 30px;
 }
@@ -597,6 +597,10 @@ tbody tr:hover {
 
 .stat-card.danger {
   border-top-color: #f44336;
+}
+
+.stat-card.info {
+  border-top-color: #2196f3;
 }
 
 .stat-label {
@@ -843,4 +847,238 @@ tbody tr:hover {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* Leave Application Page */
+.leave-application-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.page-header {
+  margin-bottom: 30px;
+  border-bottom: 2px solid #667eea;
+  padding-bottom: 15px;
+}
+
+.page-header h1 {
+  color: #333;
+  font-size: 28px;
+}
+
+/* Leave Tabs */
+.leave-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 30px;
+  border-bottom: 1px solid #eee;
+}
+
+.leave-tab {
+  background: none;
+  border: none;
+  padding: 12px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  color: #666;
+  border-bottom: 3px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.leave-tab:hover {
+  color: #667eea;
+}
+
+.leave-tab.active {
+  color: #667eea;
+  border-bottom-color: #667eea;
+}
+
+/* Leave Apply Form */
+.leave-apply-form {
+  max-width: 600px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #333;
+  font-weight: 500;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+/* Leave Message */
+#leaveMessage {
+  margin-top: 20px;
+}
+
+.message {
+  padding: 15px;
+  border-radius: 4px;
+  font-weight: 500;
+  margin-top: 20px;
+}
+
+.message.success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.message.error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+/* Past Applications */
+.past-applications {
+  max-width: 900px;
+}
+
+.applications-list {
+  display: grid;
+  gap: 20px;
+}
+
+.application-card {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 20px;
+  background: #f9f9f9;
+  transition: all 0.3s ease;
+}
+
+.application-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: #667eea;
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.app-header h3 {
+  color: #333;
+  font-size: 18px;
+  margin: 0;
+}
+
+.status {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status.pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status.approved {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status.rejected {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.status.cancelled {
+  background: #e2e3e5;
+  color: #383d41;
+}
+
+.app-details {
+  color: #555;
+  font-size: 14px;
+}
+
+.app-details p {
+  margin: 10px 0;
+  line-height: 1.6;
+}
+
+.app-details strong {
+  color: #333;
+}
+
+.empty-message {
+  text-align: center;
+  padding: 40px;
+  color: #999;
+  font-size: 16px;
+}
+
+.error {
+  color: #d32f2f;
+  padding: 20px;
+  background: #ffebee;
+  border-radius: 4px;
+  border-left: 4px solid #d32f2f;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .leave-application-container {
+    margin: 0;
+    border-radius: 0;
+  }
+
+  .app-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .status {
+    margin-top: 10px;
+  }
+
+  .leave-tabs {
+    flex-wrap: wrap;
+  }
+
+  .leave-tab {
+    padding: 10px 15px;
+    font-size: 14px;
+  }
 }

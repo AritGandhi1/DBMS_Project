@@ -88,6 +88,19 @@ async function getStudentDetails(req, res, next) {
 
     const student = rows[0];
 
+    // Check if student is a TA
+    const [taRows] = await pool.execute(
+      `SELECT ta_id, role, term_number
+       FROM TA_ASSIGNMENT
+       WHERE student_id = ?
+       LIMIT 1`,
+      [studentId]
+    );
+
+    const isTA = taRows && taRows.length > 0;
+    const taRole = isTA ? taRows[0].role : null;
+    const taTermNumber = isTA ? taRows[0].term_number : null;
+
     res.status(200).json({
       message: "Student details retrieved",
       student: {
@@ -100,7 +113,10 @@ async function getStudentDetails(req, res, next) {
         phone: student.phone,
         dob: student.dob,
         advisorId: student.advisor_id,
-        advisorName: student.advisor_name || "N/A"
+        advisorName: student.advisor_name || "N/A",
+        isTA: isTA,
+        taRole: taRole,
+        taTermNumber: taTermNumber
       }
     });
   } catch (error) {
@@ -324,6 +340,64 @@ async function getStudentAttendance(req, res, next) {
     res.status(200).json({
       message: "Attendance records retrieved",
       attendance
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function getStudentExams(req, res, next) {
+  try {
+    if (req.user.role !== "STUDENT") {
+      const error = new Error("Only students can access this endpoint");
+      error.status = 403;
+      throw error;
+    }
+
+    const studentId = req.user.id;
+
+    const [rows] = await pool.execute(
+      `SELECT
+        ex.exam_id,
+        ex.exam_type,
+        ex.exam_date,
+        ex.exam_time,
+        ex.venue,
+        c.course_id,
+        c.course_name,
+        c.credits,
+        co.term_number,
+        f.name AS faculty_name
+       FROM ENROLLMENT e
+       JOIN COURSE_OFFERING co ON e.offering_id = co.offering_id
+       JOIN COURSE c ON co.course_id = c.course_id
+       JOIN EXAM ex ON ex.offering_id = co.offering_id
+       LEFT JOIN FACULTY f ON co.faculty_id = f.faculty_id
+       WHERE e.student_id = ?
+       ORDER BY ex.exam_date ASC, ex.exam_time ASC, c.course_id ASC`,
+      [studentId]
+    );
+
+    const exams = rows.map((row) => ({
+      examId: row.exam_id,
+      examType: row.exam_type,
+      examDate: row.exam_date,
+      examTime: row.exam_time,
+      venue: row.venue,
+      courseId: row.course_id,
+      courseName: row.course_name,
+      credits: row.credits,
+      termNumber: row.term_number,
+      facultyName: row.faculty_name || "Unassigned"
+    }));
+
+    const midSemExams = exams.filter((exam) => exam.examType === "MidSem");
+    const endSemExams = exams.filter((exam) => exam.examType === "EndSem");
+
+    res.status(200).json({
+      message: "Exam schedule retrieved",
+      midSemExams,
+      endSemExams
     });
   } catch (error) {
     next(error);
@@ -1009,6 +1083,192 @@ async function enrollCourse(req, res, next) {
   }
 }
 
+async function getTAEnrollmentOptions(req, res, next) {
+  try {
+    if (req.user.role !== "STUDENT") {
+      const error = new Error("Only students can access this endpoint");
+      error.status = 403;
+      throw error;
+    }
+
+    const studentId = req.user.id;
+
+    const [studentRows] = await pool.execute(
+      `SELECT student_id, current_term_number, branch
+       FROM STUDENT
+       WHERE student_id = ?
+       LIMIT 1`,
+      [studentId]
+    );
+
+    if (!studentRows[0]) {
+      const error = new Error("Student profile not found");
+      error.status = 404;
+      throw error;
+    }
+
+    const student = studentRows[0];
+    const currentTermNumber = Number(student.current_term_number || 0);
+    const canApply = currentTermNumber === 7 || currentTermNumber === 8;
+    const studentBranch = String(student.branch || "").trim().toUpperCase();
+
+    if (!canApply) {
+      return res.status(200).json({
+        message: "TA enrollment is available only for semester 7 or 8",
+        currentTermNumber,
+        canApply: false,
+        faculties: [],
+        applications: [],
+        appliedFacultyIds: []
+      });
+    }
+
+    const [facultyRows] = await pool.execute(
+      `SELECT faculty_id, name, department
+       FROM FACULTY
+       WHERE UPPER(TRIM(department)) = ?
+       ORDER BY faculty_id`,
+      [studentBranch]
+    );
+
+    const [applicationRows] = await pool.execute(
+      `SELECT ta.ta_id, ta.faculty_id, ta.role, ta.term_number, f.name AS faculty_name
+       FROM TA_ASSIGNMENT ta
+       JOIN FACULTY f ON f.faculty_id = ta.faculty_id
+       WHERE ta.student_id = ?
+         AND ta.term_number = ?
+         AND ta.offering_id IS NULL
+       ORDER BY ta.ta_id DESC`,
+      [studentId, currentTermNumber]
+    );
+
+    const faculties = facultyRows.map((row) => ({
+      facultyId: row.faculty_id,
+      facultyName: row.name,
+      department: row.department
+    }));
+
+    const applications = applicationRows.map((row) => ({
+      taId: row.ta_id,
+      facultyId: row.faculty_id,
+      facultyName: row.faculty_name,
+      role: row.role,
+      termNumber: row.term_number
+    }));
+
+    res.status(200).json({
+      message: "TA enrollment options retrieved",
+      currentTermNumber,
+      canApply: true,
+      faculties,
+      applications,
+      appliedFacultyIds: applications.map((application) => application.facultyId)
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function applyTAEnrollment(req, res, next) {
+  try {
+    if (req.user.role !== "STUDENT") {
+      const error = new Error("Only students can access this endpoint");
+      error.status = 403;
+      throw error;
+    }
+
+    const studentId = req.user.id;
+    const { facultyId } = req.body;
+
+    if (!facultyId) {
+      const error = new Error("facultyId is required");
+      error.status = 400;
+      throw error;
+    }
+
+    const [studentRows] = await pool.execute(
+      `SELECT student_id, current_term_number, branch
+       FROM STUDENT
+       WHERE student_id = ?
+       LIMIT 1`,
+      [studentId]
+    );
+
+    if (!studentRows[0]) {
+      const error = new Error("Student profile not found");
+      error.status = 404;
+      throw error;
+    }
+
+    const student = studentRows[0];
+    const currentTermNumber = Number(student.current_term_number || 0);
+    const studentBranch = String(student.branch || "").trim().toUpperCase();
+
+    if (currentTermNumber !== 7 && currentTermNumber !== 8) {
+      const error = new Error("TA enrollment is available only for semester 7 or 8");
+      error.status = 403;
+      throw error;
+    }
+
+    const [facultyRows] = await pool.execute(
+      `SELECT faculty_id, name, department
+       FROM FACULTY
+       WHERE faculty_id = ?
+       LIMIT 1`,
+      [facultyId]
+    );
+
+    if (!facultyRows[0]) {
+      const error = new Error("Faculty not found");
+      error.status = 404;
+      throw error;
+    }
+
+    const faculty = facultyRows[0];
+    const facultyDepartment = String(faculty.department || "").trim().toUpperCase();
+
+    if (facultyDepartment !== studentBranch) {
+      const error = new Error("You can only apply to faculty in your department");
+      error.status = 403;
+      throw error;
+    }
+
+    const [existingRows] = await pool.execute(
+      `SELECT ta_id
+       FROM TA_ASSIGNMENT
+       WHERE student_id = ?
+         AND faculty_id = ?
+         AND term_number = ?
+         AND offering_id IS NULL
+       LIMIT 1`,
+      [studentId, facultyId, currentTermNumber]
+    );
+
+    if (existingRows[0]) {
+      const error = new Error("Already applied for TA with this faculty");
+      error.status = 409;
+      throw error;
+    }
+
+    const [insertResult] = await pool.execute(
+      `INSERT INTO TA_ASSIGNMENT (student_id, faculty_id, term_number, offering_id, role)
+       VALUES (?, ?, ?, NULL, 'Department TA')`,
+      [studentId, facultyId, currentTermNumber]
+    );
+
+    res.status(201).json({
+      message: "TA application submitted successfully",
+      taId: insertResult.insertId,
+      facultyId,
+      facultyName: faculty.name,
+      termNumber: currentTermNumber,
+      role: "Department TA"
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function getCoursesForFeedback(req, res, next) {
   try {
     if (req.user.role !== "STUDENT") {
@@ -1133,34 +1393,46 @@ async function getStudentNotifications(req, res, next) {
     const [rows] = await pool.execute(
       `SELECT n.notification_id, n.message, n.created_at
        FROM NOTIFICATION n
-       WHERE n.student_id = ?
+       WHERE n.id = ?
           OR EXISTS (
             SELECT 1
             FROM ENROLLMENT e
             JOIN COURSE_OFFERING co ON e.offering_id = co.offering_id
             WHERE e.student_id = ?
-              AND co.course_id = n.student_id
+              AND co.course_id = n.id
+          )
+          OR n.id = (
+            SELECT s.advisor_id
+            FROM STUDENT s
+            WHERE s.student_id = ?
+            LIMIT 1
           )
        ORDER BY n.created_at DESC
        LIMIT 20`,
-      [studentId, studentId]
+      [studentId, studentId, studentId]
     );
 
     const [recentRows] = await pool.execute(
       `SELECT COUNT(*) AS recent_count
        FROM NOTIFICATION n
        WHERE (
-         n.student_id = ?
+         n.id = ?
          OR EXISTS (
            SELECT 1
            FROM ENROLLMENT e
            JOIN COURSE_OFFERING co ON e.offering_id = co.offering_id
            WHERE e.student_id = ?
-             AND co.course_id = n.student_id
+             AND co.course_id = n.id
+         )
+         OR n.id = (
+           SELECT s.advisor_id
+           FROM STUDENT s
+           WHERE s.student_id = ?
+           LIMIT 1
          )
        )
          AND n.created_at >= (NOW() - INTERVAL 3 DAY)`,
-      [studentId, studentId]
+      [studentId, studentId, studentId]
     );
 
     const notifications = rows.map((row) => ({
@@ -1179,12 +1451,100 @@ async function getStudentNotifications(req, res, next) {
   }
 }
 
+async function submitLeaveApplication(req, res, next) {
+  try {
+    if (req.user.role !== "STUDENT") {
+      const error = new Error("Only students can apply for leave");
+      error.status = 403;
+      throw error;
+    }
+
+    const studentId = req.user.id;
+    const { leaveType, startDate, endDate, reason } = req.body;
+
+    if (!leaveType || !startDate || !endDate || !reason) {
+      const error = new Error("Missing required fields: leaveType, startDate, endDate, reason");
+      error.status = 400;
+      throw error;
+    }
+
+    // Validate dates
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (end < start) {
+      const error = new Error("End date must be after or equal to start date");
+      error.status = 400;
+      throw error;
+    }
+
+    // Insert leave application
+    const [result] = await pool.execute(
+      `INSERT INTO LEAVE_APPLICATION (student_id, start_date, end_date, reason, status, applied_on)
+       VALUES (?, ?, ?, ?, 'Pending', CURDATE())`,
+      [studentId, startDate, endDate, reason]
+    );
+
+    res.status(201).json({
+      message: "Leave application submitted successfully",
+      leaveId: result.insertId
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function getPastLeaveApplications(req, res, next) {
+  try {
+    if (req.user.role !== "STUDENT") {
+      const error = new Error("Only students can view their leave applications");
+      error.status = 403;
+      throw error;
+    }
+
+    const studentId = req.user.id;
+
+    const [rows] = await pool.execute(
+      `SELECT 
+        leave_id AS leaveId,
+        student_id AS studentId,
+        start_date AS startDate,
+        end_date AS endDate,
+        reason,
+        status,
+        applied_on AS createdAt
+       FROM LEAVE_APPLICATION
+       WHERE student_id = ?
+       ORDER BY applied_on DESC, leave_id DESC`,
+      [studentId]
+    );
+
+    const applications = rows.map((row) => ({
+      leaveId: row.leaveId,
+      leaveType: "Leave",
+      startDate: row.startDate,
+      endDate: row.endDate,
+      reason: row.reason,
+      status: row.status,
+      createdAt: row.createdAt
+    }));
+
+    res.status(200).json({
+      message: "Leave applications retrieved",
+      applications
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   getStudentDetails,
   getStudentCourses,
   getStudentTranscript,
   getStudentResults,
   getStudentAttendance,
+  getStudentExams,
   getStudentInternships,
   applyInternship,
   getStudentPlacements,
@@ -1192,7 +1552,11 @@ module.exports = {
   getStudentTimetable,
   getEnrollmentOptions,
   enrollCourse,
+  getTAEnrollmentOptions,
+  applyTAEnrollment,
   getCoursesForFeedback,
   submitFeedback,
-  getStudentNotifications
+  getStudentNotifications,
+  submitLeaveApplication,
+  getPastLeaveApplications
 };
