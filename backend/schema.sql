@@ -7,24 +7,27 @@ USE student_db;
 SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS ACADEMIC_TRANSCRIPT;
 DROP TABLE IF EXISTS RESULT_HISTORY;
+DROP TABLE IF EXISTS PLACEMENT_OPENING;
+DROP TABLE IF EXISTS INTERNSHIP_OPENING;
+DROP TABLE IF EXISTS PLACEMENT_BRANCH;
+DROP TABLE IF EXISTS INTERNSHIP_BRANCH;
 DROP TABLE IF EXISTS PLACEMENT;
 DROP TABLE IF EXISTS INTERNSHIP;
-DROP TABLE IF EXISTS NOTIFICATION;
-DROP TABLE IF EXISTS PAYMENT;
 DROP TABLE IF EXISTS PREREQUISITE;
 DROP TABLE IF EXISTS TIMETABLE;
 DROP TABLE IF EXISTS ROOM;
 DROP TABLE IF EXISTS CGPA;
-DROP TABLE IF EXISTS TA_ASSIGNMENT;
 DROP TABLE IF EXISTS FEEDBACK;
+DROP TABLE IF EXISTS ATTENDANCE;
+DROP TABLE IF EXISTS ENROLLMENT;
+DROP TABLE IF EXISTS MARKS;
+DROP TABLE IF EXISTS COURSE_OFFERING;
+DROP TABLE IF EXISTS NOTIFICATION;
+DROP TABLE IF EXISTS COURSE;
+DROP TABLE IF EXISTS PAYMENT;
+DROP TABLE IF EXISTS TA_ASSIGNMENT;
 DROP TABLE IF EXISTS LEAVE_APPLICATION;
 DROP TABLE IF EXISTS EXAM;
-DROP TABLE IF EXISTS ATTENDANCE;
-DROP TABLE IF EXISTS MARKS;
-DROP TABLE IF EXISTS ENROLLMENT;
-DROP TABLE IF EXISTS COURSE_OFFERING;
-DROP TABLE IF EXISTS TERM;
-DROP TABLE IF EXISTS COURSE;
 DROP TABLE IF EXISTS DOCUMENT;
 DROP TABLE IF EXISTS STUDENT;
 DROP TABLE IF EXISTS FACULTY;
@@ -44,7 +47,7 @@ CREATE TABLE ADMIN (
 -- FACULTY
 -- =========================================
 CREATE TABLE FACULTY (
-    faculty_id INT AUTO_INCREMENT PRIMARY KEY,
+    faculty_id VARCHAR(10) PRIMARY KEY,
     password VARCHAR(100) NOT NULL,
     name VARCHAR(100) NOT NULL,
     email VARCHAR(100) UNIQUE,
@@ -64,8 +67,9 @@ CREATE TABLE STUDENT (
     personal_email VARCHAR(100) UNIQUE,
     phone VARCHAR(15),
     dob DATE,
-    advisor_id INT,
-
+    advisor_id VARCHAR(10),
+    current_term_number INT NOT NULL,
+    branch VARCHAR(50) NOT NULL,
     FOREIGN KEY (advisor_id) REFERENCES FACULTY(faculty_id)
         ON DELETE SET NULL
 );
@@ -88,38 +92,30 @@ CREATE TABLE DOCUMENT (
 -- COURSE
 -- =========================================
 CREATE TABLE COURSE (
-    course_id INT PRIMARY KEY,
+    course_id VARCHAR(10) PRIMARY KEY,
     course_name VARCHAR(100) NOT NULL,
-    credits INT CHECK (credits > 0)
+    credits INT CHECK (credits > 0),
+    branch VARCHAR(50) NOT NULL
 );
 
--- =========================================
--- TERM
--- =========================================
-CREATE TABLE TERM (
-    term_id INT AUTO_INCREMENT PRIMARY KEY,
-    year INT NOT NULL,
-    semester ENUM('Autumn','Spring') NOT NULL,
-    UNIQUE(year, semester)
-);
 
 -- =========================================
 -- COURSE OFFERING
 -- =========================================
 CREATE TABLE COURSE_OFFERING (
     offering_id INT AUTO_INCREMENT PRIMARY KEY,
-    course_id INT,
-    faculty_id INT,
-    term_id INT,
+    course_id VARCHAR(10),
+    type ENUM('Core','Elective', 'Lab', 'Breadth', 'Lateral') NOT NULL,
+    faculty_id VARCHAR(10),
+    term_number INT,
+    total_classes_conducted INT DEFAULT 0,
 
     FOREIGN KEY (course_id) REFERENCES COURSE(course_id)
         ON DELETE CASCADE,
     FOREIGN KEY (faculty_id) REFERENCES FACULTY(faculty_id)
         ON DELETE SET NULL,
-    FOREIGN KEY (term_id) REFERENCES TERM(term_id)
-        ON DELETE CASCADE,
 
-    UNIQUE(course_id, term_id)
+    UNIQUE(course_id, term_number)
 );
 
 -- =========================================
@@ -167,7 +163,7 @@ CREATE TABLE ATTENDANCE (
     attendance_id INT AUTO_INCREMENT PRIMARY KEY,
     student_id VARCHAR(10),
     offering_id INT,
-    count INT DEFAULT 0,
+    classes_attended_count INT DEFAULT 0,
 
     FOREIGN KEY (student_id) REFERENCES STUDENT(student_id)
         ON DELETE CASCADE,
@@ -240,8 +236,8 @@ CREATE TABLE TA_ASSIGNMENT (
     ta_id INT AUTO_INCREMENT PRIMARY KEY,
 
     student_id VARCHAR(10),
-    faculty_id INT,
-    term_id INT,
+    faculty_id VARCHAR(10),
+    term_number INT,
     offering_id INT NULL,
 
     role VARCHAR(50),
@@ -250,12 +246,10 @@ CREATE TABLE TA_ASSIGNMENT (
         ON DELETE CASCADE,
     FOREIGN KEY (faculty_id) REFERENCES FACULTY(faculty_id)
         ON DELETE CASCADE,
-    FOREIGN KEY (term_id) REFERENCES TERM(term_id)
-        ON DELETE CASCADE,
     FOREIGN KEY (offering_id) REFERENCES COURSE_OFFERING(offering_id)
         ON DELETE SET NULL,
 
-    UNIQUE(student_id, faculty_id, term_id, offering_id)
+    UNIQUE(student_id, faculty_id, term_number, offering_id)
 );
 
 -- =========================================
@@ -302,8 +296,8 @@ CREATE TABLE TIMETABLE (
 -- PREREQUISITE
 -- =========================================
 CREATE TABLE PREREQUISITE (
-    course_id INT,
-    prereq_course_id INT,
+    course_id VARCHAR(10),
+    prereq_course_id VARCHAR(10),
 
     PRIMARY KEY(course_id, prereq_course_id),
 
@@ -320,15 +314,13 @@ CREATE TABLE PAYMENT (
     payment_id INT AUTO_INCREMENT PRIMARY KEY,
     student_id VARCHAR(10),
     payment_type VARCHAR(10),
-    term_id INT,
+    term_number INT,
 
     amount DECIMAL(10,2),
     payment_date DATE,
     status ENUM('Paid','Pending'),
 
     FOREIGN KEY (student_id) REFERENCES STUDENT(student_id)
-        ON DELETE CASCADE,
-    FOREIGN KEY (term_id) REFERENCES TERM(term_id)
         ON DELETE CASCADE
 );
 
@@ -340,12 +332,46 @@ CREATE TABLE NOTIFICATION (
     student_id VARCHAR(10),
 
     message TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-
-    FOREIGN KEY (student_id) REFERENCES STUDENT(student_id)
-        ON DELETE CASCADE
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- =========================================
+-- INTERNSHIP OPENING
+-- =========================================
+CREATE TABLE INTERNSHIP_OPENING (
+    opening_id INT AUTO_INCREMENT PRIMARY KEY,
+    company VARCHAR(100) NOT NULL,
+    role VARCHAR(100) NOT NULL,
+    stipend DECIMAL(10,2) NOT NULL,
+    duration_months DECIMAL(4,1) NOT NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1
+);
+
+CREATE TABLE INTERNSHIP_BRANCH (
+    opening_id INT,
+    branch VARCHAR(50),
+    PRIMARY KEY (opening_id, branch),
+    FOREIGN KEY (opening_id) REFERENCES INTERNSHIP_OPENING(opening_id)
+        ON DELETE CASCADE
+);
+-- =========================================
+-- PLACEMENT OPENING
+-- =========================================
+CREATE TABLE PLACEMENT_OPENING (
+    opening_id INT AUTO_INCREMENT PRIMARY KEY,
+    company VARCHAR(100) NOT NULL,
+    role VARCHAR(100) NOT NULL,
+    ctc DECIMAL(12,2) NOT NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1
+);
+
+CREATE TABLE PLACEMENT_BRANCH (
+    opening_id INT,
+    branch VARCHAR(50),
+    PRIMARY KEY (opening_id, branch),
+    FOREIGN KEY (opening_id) REFERENCES PLACEMENT_OPENING(opening_id)
+        ON DELETE CASCADE
+);
 -- =========================================
 -- INTERNSHIP
 -- =========================================
@@ -353,13 +379,19 @@ CREATE TABLE NOTIFICATION (
 CREATE TABLE INTERNSHIP (
     internship_id INT AUTO_INCREMENT PRIMARY KEY,
     student_id VARCHAR(10),
+    opening_id INT NULL,
 
     company VARCHAR(100),
     role VARCHAR(100),
     package DECIMAL(10,2),
     duration DECIMAL(10,2),
+    status ENUM('Applied','Accepted','Rejected') NOT NULL DEFAULT 'Applied',
+    applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    decision_at DATETIME NULL,
     FOREIGN KEY (student_id) REFERENCES STUDENT(student_id)
-        ON DELETE CASCADE
+        ON DELETE CASCADE,
+    FOREIGN KEY (opening_id) REFERENCES INTERNSHIP_OPENING(opening_id)
+        ON DELETE SET NULL
 );
 
 -- =========================================
@@ -368,13 +400,19 @@ CREATE TABLE INTERNSHIP (
 CREATE TABLE PLACEMENT (
     placement_id INT AUTO_INCREMENT PRIMARY KEY,
     student_id VARCHAR(10),
+    opening_id INT NULL,
 
     company VARCHAR(100),
     role VARCHAR(100),
     package DECIMAL(10,2),
+    status ENUM('Applied','Accepted','Rejected') NOT NULL DEFAULT 'Applied',
+    applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    decision_at DATETIME NULL,
 
     FOREIGN KEY (student_id) REFERENCES STUDENT(student_id)
-        ON DELETE CASCADE
+        ON DELETE CASCADE,
+    FOREIGN KEY (opening_id) REFERENCES PLACEMENT_OPENING(opening_id)
+        ON DELETE SET NULL
 );
 
 -- =========================================
@@ -382,14 +420,12 @@ CREATE TABLE PLACEMENT (
 -- =========================================
 CREATE TABLE RESULT_HISTORY (
     student_id VARCHAR(10),
-    term_id INT,
-    PRIMARY KEY (student_id, term_id),
+    term_number INT,
+    PRIMARY KEY (student_id, term_number),
     sgpa DECIMAL(4,2),
     cgpa DECIMAL(4,2),
 
     FOREIGN KEY (student_id) REFERENCES STUDENT(student_id)
-        ON DELETE CASCADE,
-    FOREIGN KEY (term_id) REFERENCES TERM(term_id)
         ON DELETE CASCADE
 );
 
@@ -399,8 +435,8 @@ CREATE TABLE RESULT_HISTORY (
 CREATE TABLE ACADEMIC_TRANSCRIPT (
     transcript_id INT AUTO_INCREMENT PRIMARY KEY,
     student_id VARCHAR(10) NOT NULL,
-    course_id INT NOT NULL,
-    term_id INT NOT NULL,
+    course_id VARCHAR(10) NOT NULL,
+    term_number INT NOT NULL,
     
     mid_sem INT CHECK (mid_sem BETWEEN 0 AND 30),
     end_sem INT CHECK (end_sem BETWEEN 0 AND 50),
@@ -414,10 +450,8 @@ CREATE TABLE ACADEMIC_TRANSCRIPT (
         ON DELETE CASCADE,
     FOREIGN KEY (course_id) REFERENCES COURSE(course_id)
         ON DELETE RESTRICT,
-    FOREIGN KEY (term_id) REFERENCES TERM(term_id)
-        ON DELETE RESTRICT,
     
-    UNIQUE(student_id, course_id, term_id)
+    UNIQUE(student_id, course_id, term_number)
 );
 
 -- =========================================
@@ -427,8 +461,10 @@ INSERT INTO ADMIN (admin_id, username, password) VALUES
     (1, 'admin', 'admin123');
 
 INSERT INTO FACULTY (faculty_id, password, name, email, phone, department) VALUES
-    (1, 'faculty123', 'Dr. Meera Nair', 'meera.nair@university.edu', '9876543210', 'Computer Science'),
-    (2, 'faculty123', 'Dr. Rohan Iyer', 'rohan.iyer@university.edu', '9876543211', 'Information Technology');
+    ('CS01', 'faculty123', 'Dr. Meera Nair', 'meera.nair@university.edu', '9876543210', 'Computer Science'),
+    ('IT01', 'faculty123', 'Dr. Rohan Iyer', 'rohan.iyer@university.edu', '9876543211', 'Information Technology'),
+    ('EC01', 'faculty123', 'Dr. Kavya Menon', 'kavya.menon@university.edu', '9876543212', 'Electronics and Communication'),
+    ('ME01', 'faculty123', 'Dr. Arjun Das', 'arjun.das@university.edu', '9876543213', 'Mechanical Engineering');
 
 INSERT INTO STUDENT (
     student_id,
@@ -439,107 +475,216 @@ INSERT INTO STUDENT (
     personal_email,
     phone,
     dob,
-    advisor_id
+    advisor_id,
+    current_term_number,
+    branch
 ) VALUES
-    ('S1001', 'student123', 'Aarav Sharma', 2025, 'aarav.sharma@university.edu', 'aarav.sharma@gmail.com', '9000000001', '2004-06-14', 1),
-    ('S1002', 'student123', 'Diya Patel', 2025, 'diya.patel@university.edu', 'diya.patel@gmail.com', '9000000002', '2004-11-02', 2);
+    ('23CS01', '1', 'Aarav Sharma', 2025, 'aarav.sharma@university.edu', 'aarav.sharma@gmail.com', '9000000001', '2004-06-14', 'CS01', 1, 'CSE'),
+    ('23CS02', '1', 'Diya Patel', 2025, 'diya.patel@university.edu', 'diya.patel@gmail.com', '9000000002', '2004-11-02', 'IT01', 2, 'CSE'),
+    ('23IT01', '1', 'Riya Verma', 2025, 'riya.verma@university.edu', 'riya.verma@gmail.com', '9000000003', '2004-03-22', 'IT01', 1, 'IT'),
+    ('23EC01', '1', 'Kiran Rao', 2025, 'kiran.rao@university.edu', 'kiran.rao@gmail.com', '9000000004', '2004-08-30', 'EC01', 2, 'ECE'),
+    ('23ME01', '1', 'Ananya Singh', 2025, 'ananya.singh@university.edu', 'ananya.singh@gmail.com', '9000000005', '2004-12-15', 'ME01', 6, 'ME'),
+    ('23CS03', '1', 'Vivaan Kapoor', 2025, 'vivaan.kapoor@university.edu', 'vivaan.kapoor@gmail.com', '9000000006', '2004-09-20', 'CS01', 8, 'CSE');
 
 INSERT INTO DOCUMENT (document_id, student_id, doc_type, file_name, file_data) VALUES
-    (1, 'S1001', 'ID Card', 'S1001-id-card.pdf', NULL),
-    (2, 'S1002', 'Transfer Certificate', 'S1002-tc.pdf', NULL);
+    (1, '23CS01', 'ID Card', '23CS01-id-card.pdf', NULL),
+    (2, '23CS02', 'Transfer Certificate', '23CS02-tc.pdf', NULL),
+    (3, '23IT01', 'ID Card', '23IT01-id-card.pdf', NULL),
+    (4, '23EC01', 'Bonafide Certificate', '23EC01-bonafide.pdf', NULL);
 
-INSERT INTO COURSE (course_id, course_name, credits) VALUES
-    (101, 'Database Systems', 4),
-    (102, 'Operating Systems', 4),
-    (103, 'Web Development', 3);
+INSERT INTO COURSE (course_id, course_name, branch, credits) VALUES
+    ('CS101', 'Database Systems', 'CSE', 4),
+    ('CS102', 'Operating Systems', 'CSE', 4),
+    ('CS103', 'Web Development', 'CSE', 3),
+    ('CS104', 'Data Structures', 'CSE', 4),
+    ('IT101', 'Network Security', 'IT', 4),
+    ('IT102', 'Cloud Computing', 'IT', 4),
+    ('EC101', 'Microprocessors', 'ECE', 4),
+    ('EC102', 'Digital Signal Processing', 'ECE', 4),
+    ('ME101', 'Thermodynamics', 'ME', 4),
+    ('ME102', 'Fluid Mechanics', 'ME', 4),
+    ('CE101', 'Structural Analysis', 'CE', 4),
+    ('CE102', 'Geotechnical Engineering', 'CE', 4),
+    ('CS105', 'Artificial Intelligence', 'CSE', 4),
+    ('CS106', 'Machine Learning', 'CSE', 4),
+    ('CS107', 'Computer Networks', 'CSE', 4),
+    ('CS108', 'Software Engineering', 'CSE', 4),
+    ('CS109', 'Cybersecurity', 'CSE', 4),
+    ('CS110', 'Mobile App Development', 'CSE', 4),
+    ('IT103', 'Data Analytics', 'IT', 4),
+    ('IT104', 'Internet of Things', 'IT', 4),
+    ('EC103', 'VLSI Design', 'ECE', 4),
+    ('EC104', 'Embedded Systems', 'ECE', 4),
+    ('ME103', 'Manufacturing Processes', 'ME', 4),
+    ('ME104', 'Robotics', 'ME', 4),
+    ('CE103', 'Transportation Engineering', 'CE', 4),
+    ('CE104', 'Environmental Engineering', 'CE', 4);
 
-INSERT INTO TERM (term_id, year, semester) VALUES
-    (1, 2025, 'Autumn'),
-    (2, 2026, 'Spring');
-
-INSERT INTO COURSE_OFFERING (offering_id, course_id, faculty_id, term_id) VALUES
-    (1, 101, 1, 1),
-    (2, 102, 2, 1),
-    (3, 103, 1, 2);
+INSERT INTO COURSE_OFFERING (offering_id, course_id, type, faculty_id, term_number, total_classes_conducted) VALUES
+    (1, 'CS101', 'Core', 'CS01', 1, 8),
+    (2, 'CS102', 'Core', 'IT01', 1, 7),
+    (3, 'CS103', 'Elective', 'CS01', 2, 9),
+    (4, 'CS104', 'Lab', 'IT01', 2, 8),
+    (5, 'IT101', 'Lateral', 'CS01', 1, 9),
+    (6, 'IT102', 'Core', 'IT01', 1, 8),
+    (7, 'EC101', 'Lateral', 'EC01', 1, 8),
+    (8, 'EC102', 'Core', 'EC01', 2, 10),
+    (9, 'ME101', 'Core', 'ME01', 1, 8),
+    (10, 'ME102', 'Core', 'ME01', 2, 7),
+    (11, 'CE101', 'Core', 'CS01', 1, 8),
+    (12, 'CE102', 'Breadth', 'IT01', 2, 7),
+    (13, 'CS105', 'Elective', 'CS01', 2, 9),
+    (14, 'CS106', 'Elective', 'IT01', 2, 8),
+    (15, 'CS107', 'Elective', 'CS01', 1, 8),
+    (16, 'CS108', 'Elective', 'IT01', 1, 7),
+    (17, 'CS109', 'Elective', 'CS01', 2, 9),
+    (18, 'CS110', 'Elective', 'IT01', 2, 8),
+    (19, 'IT103', 'Core', 'IT01', 1, 8),
+    (20, 'IT104', 'Core', 'IT01', 2, 9),
+    (21, 'EC103', 'Core', 'EC01', 1, 8),
+    (22, 'EC104', 'Core', 'EC01', 2, 10),
+    (23, 'ME103', 'Core', 'ME01', 1, 8),
+    (24, 'ME104', 'Core', 'ME01', 2, 7),
+    (25, 'CE103', 'Core', 'CS01', 1, 8),
+    (26, 'CE104', 'Core', 'IT01', 2, 9);
 
 INSERT INTO ENROLLMENT (enrollment_id, student_id, offering_id, enrollment_date) VALUES
-    (1, 'S1001', 1, '2025-08-01'),
-    (2, 'S1001', 2, '2025-08-02'),
-    (3, 'S1002', 1, '2025-08-01'),
-    (4, 'S1002', 3, '2026-01-10');
+    (1, '23CS01', 1, '2025-08-01'),
+    (2, '23CS01', 2, '2025-08-02'),
+    (3, '23CS02', 1, '2025-08-01'),
+    (4, '23CS02', 3, '2026-01-10'),
+    (5, '23IT01', 5, '2025-08-03'),
+    (6, '23IT01', 6, '2025-08-05'),
+    (7, '23EC01', 7, '2025-08-04'),
+    (8, '23EC01', 8, '2026-01-12');
 
 INSERT INTO MARKS (student_id, offering_id, mid_sem, end_sem, internal, grade) VALUES
-    ('S1001', 1, 26, 42, 17, 'A'),
-    ('S1001', 2, 24, 39, 16, 'B'),
-    ('S1002', 1, 28, 44, 18, 'A'),
-    ('S1002', 3, 27, 41, 19, 'A');
+    ('23CS01', 1, 26, 42, 17, 'A'),
+    ('23CS01', 2, 24, 39, 16, 'B'),
+    ('23CS02', 1, 28, 44, 18, 'A'),
+    ('23CS02', 3, 27, 41, 19, 'A'),
+    ('23IT01', 5, 25, 40, 18, 'A'),
+    ('23IT01', 6, 23, 37, 17, 'B'),
+    ('23EC01', 7, 22, 36, 15, 'B'),
+    ('23EC01', 8, 26, 43, 18, 'A');
 
-INSERT INTO ATTENDANCE (attendance_id, student_id, offering_id,count) VALUES
-    (1, 'S1001', 1, 5),
-    (2, 'S1002', 1, 3);
+INSERT INTO ATTENDANCE (attendance_id, student_id, offering_id, classes_attended_count) VALUES
+    (1, '23CS01', 1, 5),
+    (2, '23CS02', 1, 3),
+    (3, '23IT01', 5, 7),
+    (4, '23EC01', 7, 6);
 
 INSERT INTO EXAM (exam_id, offering_id, exam_type, exam_date, exam_time, venue) VALUES
     (1, 1, 'MidSem', '2025-09-20', '10:00:00', 'Hall A'),
     (2, 1, 'EndSem', '2025-11-30', '14:00:00', 'Hall B'),
-    (3, 3, 'MidSem', '2026-03-15', '10:00:00', 'Hall C');
+    (3, 3, 'MidSem', '2026-03-15', '10:00:00', 'Hall C'),
+    (4, 5, 'MidSem', '2025-09-22', '09:00:00', 'Hall D'),
+    (5, 8, 'EndSem', '2026-04-05', '13:00:00', 'Hall E');
 
 INSERT INTO LEAVE_APPLICATION (leave_id, student_id, start_date, end_date, reason, status, applied_on) VALUES
-    (1, 'S1001', '2025-09-10', '2025-09-12', 'Medical leave', 'Approved', '2025-09-08');
+    (1, '23CS01', '2025-09-10', '2025-09-12', 'Medical leave', 'Approved', '2025-09-08'),
+    (2, '23IT01', '2025-10-05', '2025-10-06', 'Family function', 'Pending', '2025-10-01');
 
 INSERT INTO FEEDBACK (feedback_id, student_id, offering_id, rating, comment, submitted_on) VALUES
-    (1, 'S1001', 1, 5, 'Clear explanations and practical examples.', '2025-11-20'),
-    (2, 'S1002', 3, 4, 'Useful hands-on project work.', '2026-03-25');
+    (1, '23CS01', 1, 5, 'Clear explanations and practical examples.', '2025-11-20'),
+    (2, '23CS02', 3, 4, 'Useful hands-on project work.', '2026-03-25'),
+    (3, '23IT01', 5, 4, 'Interactive classes and good notes.', '2025-11-22'),
+    (4, '23EC01', 8, 5, 'Well structured and exam-focused teaching.', '2026-04-08');
 
-INSERT INTO TA_ASSIGNMENT (ta_id, student_id, faculty_id, term_id, offering_id, role) VALUES
-    (1, 'S1002', 1, 2, 3, 'Lab TA');
+INSERT INTO TA_ASSIGNMENT (ta_id, student_id, faculty_id, term_number, offering_id, role) VALUES
+    (1, '23CS02', 'CS01', 2, 3, 'Lab TA'),
+    (2, '23IT01', 'IT01', 1, 6, 'Course TA');
 
 INSERT INTO CGPA (student_id, cgpa) VALUES
-    ('S1001', 8.75),
-    ('S1002', 8.40);
+    ('23CS01', 8.75),
+    ('23CS02', 8.40),
+    ('23IT01', 8.10),
+    ('23EC01', 8.32);
 
 INSERT INTO ROOM (room_id, capacity, building) VALUES
     ('R101', 60, 'Main Block'),
-    ('LAB-1', 30, 'Innovation Center');
+    ('LAB-1', 30, 'Innovation Center'),
+    ('R202', 80, 'Academic Block');
 
 INSERT INTO TIMETABLE (timetable_id, offering_id, day, start_time, end_time, room_id) VALUES
     (1, 1, 'Mon', '09:00:00', '10:30:00', 'R101'),
     (2, 2, 'Wed', '11:00:00', '12:30:00', 'LAB-1'),
-    (3, 3, 'Fri', '14:00:00', '15:30:00', 'R101');
+    (3, 3, 'Fri', '14:00:00', '15:30:00', 'R101'),
+    (4, 5, 'Tue', '10:00:00', '11:30:00', 'R202'),
+    (5, 8, 'Thu', '13:00:00', '14:30:00', 'R202');
 
 INSERT INTO PREREQUISITE (course_id, prereq_course_id) VALUES
-    (102, 101),
-    (103, 101);
+    ('CS102', 'CS101'),
+    ('CS103', 'CS101'),
+    ('CS106', 'CS105'),
+    ('IT104', 'IT103');
 
-INSERT INTO PAYMENT (payment_id, student_id, payment_type, term_id, amount, payment_date, status) VALUES
-    (1, 'S1001', 'Tuition', 1, 45000.00, '2025-08-15', 'Paid'),
-    (2, 'S1002', 'Tuition', 2, 47000.00, '2026-01-15', 'Pending');
+INSERT INTO PAYMENT (payment_id, student_id, payment_type, term_number, amount, payment_date, status) VALUES
+    (1, '23CS01', 'Tuition', 1, 45000.00, '2025-08-15', 'Paid'),
+    (2, '23CS02', 'Tuition', 2, 47000.00, '2026-01-15', 'Pending'),
+    (3, '23IT01', 'Tuition', 1, 46000.00, '2025-08-16', 'Paid'),
+    (4, '23EC01', 'Tuition', 2, 45500.00, '2026-01-16', 'Pending');
 
 INSERT INTO NOTIFICATION (notification_id, student_id, message, created_at) VALUES
-    (1, 'S1001', 'Mid-semester exam schedule published.', '2025-09-18 09:00:00'),
-    (2, 'S1002', 'Fee payment reminder for Spring term.', '2026-01-20 12:00:00');
+    (1, '23CS01', 'Mid-semester exam schedule published.', '2026-04-02 09:00:00'),
+    (2, '23CS02', 'Fee payment reminder for Spring term.', '2026-01-20 12:00:00'),
+    (3, '23IT01', 'Project review scheduled for next week.', '2025-10-02 10:00:00'),
+    (4, '23EC01', 'Lab timetable updated for term 2.', '2026-02-03 15:00:00'),
+    (5, 'CS101', 'Dummy course notification: CS101 quiz this Friday.', '2026-04-03 08:30:00'),
+    (6, '23CS01', 'Dummy personal notification for testing red dot.', '2026-04-03 09:15:00');
 
-INSERT INTO INTERNSHIP (internship_id, student_id, company, role, package, duration) VALUES
-    (1, 'S1001', 'InnovaTech', 'Software Intern', 18000.00, 3.00);
+INSERT INTO INTERNSHIP_OPENING (opening_id, company, role, stipend, duration_months, is_active) VALUES
+    (1, 'InnovaTech', 'Software Intern', 18000.00, 3.0, 1),
+    (2, 'DataSphere', 'Data Analyst Intern', 20000.00, 2.5, 1),
+    (3, 'ByteFlow', 'Backend Intern', 22000.00, 4.0, 1);
 
-INSERT INTO PLACEMENT (placement_id, student_id, company, role, package) VALUES
-    (1, 'S1002', 'CloudNova', 'Junior Developer', 640000.00);
+INSERT INTO PLACEMENT_OPENING (opening_id, company, role, ctc, is_active) VALUES
+    (1, 'CloudNova', 'Junior Developer', 640000.00, 1),
+    (2, 'ChipCore', 'Embedded Engineer', 710000.00, 1),
+    (3, 'CodePulse', 'Software Engineer', 850000.00, 1);
 
-INSERT INTO RESULT_HISTORY (student_id, term_id, sgpa, cgpa) VALUES
-    ('S1001', 1, 8.60, 8.60),
-    ('S1002', 2, 8.90, 8.90);
+INSERT INTO INTERNSHIP_BRANCH (opening_id, branch) VALUES
+    (1, 'CSE'),
+    (1, 'IT'),
+    (2, 'ECE'),
+    (2, 'ME'),
+    (3, 'CSE');
+
+INSERT INTO PLACEMENT_BRANCH (opening_id, branch) VALUES
+    (1, 'CSE'),
+    (1, 'IT'),
+    (2, 'ECE'),
+    (2, 'ME'),
+    (3, 'CSE');
+
+INSERT INTO INTERNSHIP (internship_id, student_id, opening_id, company, role, package, duration, status, applied_at, decision_at) VALUES
+    (1, '23CS01', 1, 'InnovaTech', 'Software Intern', 18000.00, 3.00, 'Accepted', '2026-01-05 10:00:00', '2026-01-20 10:00:00'),
+    (2, '23IT01', 2, 'DataSphere', 'Data Analyst Intern', 20000.00, 2.50, 'Accepted', '2026-01-08 10:00:00', '2026-01-25 10:00:00');
+
+INSERT INTO PLACEMENT (placement_id, student_id, opening_id, company, role, package, status, applied_at, decision_at) VALUES
+    (1, '23CS02', 1, 'CloudNova', 'Junior Developer', 640000.00, 'Accepted', '2026-02-01 10:00:00', '2026-03-10 10:00:00'),
+    (2, '23EC01', 2, 'ChipCore', 'Embedded Engineer', 710000.00, 'Accepted', '2026-02-05 10:00:00', '2026-03-12 10:00:00');
+
+INSERT INTO RESULT_HISTORY (student_id, term_number, sgpa, cgpa) VALUES
+    ('23CS01', 1, 8.60, 8.60),
+    ('23CS02', 2, 8.90, 8.90),
+    ('23IT01', 1, 8.10, 8.10),
+    ('23EC01', 2, 8.32, 8.32);
 
 INSERT INTO ACADEMIC_TRANSCRIPT (
     transcript_id,
     student_id,
     course_id,
-    term_id,
+    term_number,
     mid_sem,
     end_sem,
     internal,
     grade,
     recorded_date
 ) VALUES
-    (1, 'S1001', 101, 1, 26, 42, 17, 'A', '2025-12-01 10:00:00'),
-    (2, 'S1001', 102, 1, 24, 39, 16, 'B', '2025-12-01 10:05:00'),
-    (3, 'S1002', 101, 1, 28, 44, 18, 'A', '2025-12-01 10:10:00'),
-    (4, 'S1002', 103, 2, 27, 41, 19, 'A', '2026-04-01 10:00:00');
+    (1, '23CS01', 'CS101', 1, 26, 42, 17, 'A', '2025-12-01 10:00:00'),
+    (2, '23CS01', 'CS102', 1, 24, 39, 16, 'B', '2025-12-01 10:05:00'),
+    (3, '23CS02', 'CS101', 1, 28, 44, 18, 'A', '2025-12-01 10:10:00'),
+    (4, '23CS02', 'CS103', 2, 27, 41, 19, 'A', '2026-04-01 10:00:00'),
+    (5, '23IT01', 'IT101', 1, 25, 40, 18, 'A', '2025-12-01 10:20:00'),
+    (6, '23EC01', 'EC102', 2, 26, 43, 18, 'A', '2026-04-01 10:30:00');

@@ -26,6 +26,7 @@ app.innerHTML = `
         <label>Student ID<input id="regStudentId" required placeholder="S1001" /></label>
         <label>Name<input id="regName" required placeholder="Ari TG" /></label>
         <label>Batch<input id="regBatch" required type="number" placeholder="2026" /></label>
+        <label>Branch<input id="regBranch" required placeholder="CSE" /></label>
         <label>College Email<input id="regEmail" required type="email" placeholder="ari.student@example.com" /></label>
         <label>Password<input id="regPassword" required type="password" placeholder="secret123" /></label>
         <button type="submit">Register</button>
@@ -55,6 +56,7 @@ app.innerHTML = `
       <div class="row">
         <button id="studentDetailsBtn" type="button">View My Details</button>
         <button id="studentCoursesBtn" type="button">View My Courses</button>
+        <button id="studentEnrollmentOptionsBtn" type="button">Enrollment Options</button>
         <button id="studentTranscriptBtn" type="button">View Transcript</button>
         <button id="studentAttendanceBtn" type="button">View Attendance</button>
       </div>
@@ -152,6 +154,7 @@ document.getElementById("registerForm").addEventListener("submit", async (event)
     studentId: document.getElementById("regStudentId").value,
     name: document.getElementById("regName").value,
     batch: Number(document.getElementById("regBatch").value),
+    branch: document.getElementById("regBranch").value,
     email: document.getElementById("regEmail").value,
     password: document.getElementById("regPassword").value
   };
@@ -191,6 +194,10 @@ document.getElementById("studentDetailsBtn").addEventListener("click", async () 
 
 document.getElementById("studentCoursesBtn").addEventListener("click", async () => {
   await callApi({ method: "get", url: "/student/courses" });
+});
+
+document.getElementById("studentEnrollmentOptionsBtn").addEventListener("click", async () => {
+  await callApi({ method: "get", url: "/student/enrollment-options" });
 });
 
 document.getElementById("studentTranscriptBtn").addEventListener("click", async () => {

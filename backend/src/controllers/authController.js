@@ -26,16 +26,17 @@ function signAccessToken(user) {
 
 async function register(req, res, next) {
   try {
-    const { studentId, name, batch, email, password, personalEmail, phone, dob } = req.body;
+    const { studentId, name, batch, email, password, branch, personalEmail, phone, dob } = req.body;
     const normalizedStudentId = String(studentId || "").trim();
     const normalizedEmail = String(email || "").trim().toLowerCase();
+    const normalizedBranch = String(branch || "").trim();
     const normalizedPersonalEmail = personalEmail ? String(personalEmail).trim().toLowerCase() : null;
     const normalizedPhone = phone ? String(phone).trim() : null;
     const normalizedDob = dob ? String(dob).trim() : null;
     const batchNumber = Number(batch);
 
-    if (!normalizedStudentId || !name || !batch || !normalizedEmail || !password) {
-      const error = new Error("studentId, name, batch, email, and password are required");
+    if (!normalizedStudentId || !name || !batch || !normalizedEmail || !password || !normalizedBranch) {
+      const error = new Error("studentId, name, batch, email, branch, and password are required");
       error.status = 400;
       throw error;
     }
@@ -76,6 +77,7 @@ async function register(req, res, next) {
       batch: batchNumber,
       email: normalizedEmail,
       passwordHash,
+      branch: normalizedBranch,
       personalEmail: normalizedPersonalEmail,
       phone: normalizedPhone,
       dob: normalizedDob

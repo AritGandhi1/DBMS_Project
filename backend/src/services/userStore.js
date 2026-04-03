@@ -10,10 +10,12 @@ async function createStudentUser({
   batch,
   email,
   passwordHash,
+  branch,
   personalEmail = null,
   phone = null,
   dob = null,
-  advisorId = null
+  advisorId = null,
+  currentTermNumber = 1
 }) {
   const normalizedStudentId = String(studentId).trim();
   const normalizedEmail = normalizeEmail(email);
@@ -31,8 +33,10 @@ async function createStudentUser({
         personal_email,
         phone,
         dob,
-        advisor_id
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        advisor_id,
+        current_term_number,
+        branch
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       normalizedStudentId,
       passwordHash,
@@ -42,7 +46,9 @@ async function createStudentUser({
       normalizedPersonalEmail,
       normalizedPhone,
       normalizedDob,
-      advisorId
+      advisorId,
+      Number(currentTermNumber),
+      String(branch || "").trim()
     ]
   );
 
@@ -76,20 +82,15 @@ async function findUserForLogin(userId) {
     };
   }
 
-  const numericId = Number(value);
-  if (Number.isNaN(numericId)) {
-    return null;
-  }
-
   const [facultyRows] = await pool.execute(
-    `SELECT CAST(faculty_id AS CHAR) AS id,
+    `SELECT faculty_id AS id,
             name,
             email,
             password AS passwordHash
      FROM FACULTY
      WHERE faculty_id = ?
      LIMIT 1`,
-    [numericId]
+    [value]
   );
 
   if (facultyRows[0]) {
@@ -97,6 +98,11 @@ async function findUserForLogin(userId) {
       ...facultyRows[0],
       role: "FACULTY"
     };
+  }
+
+  const numericId = Number(value);
+  if (Number.isNaN(numericId)) {
+    return null;
   }
 
   const [adminRows] = await pool.execute(
@@ -187,15 +193,17 @@ async function findUserByIdAndRole(id, role) {
   }
 
   if (role === "FACULTY") {
+    const facultyId = String(id || "").trim();
+
     const [rows] = await pool.execute(
-      `SELECT CAST(faculty_id AS CHAR) AS id,
+      `SELECT faculty_id AS id,
               name,
               email,
               password AS passwordHash
        FROM FACULTY
        WHERE faculty_id = ?
        LIMIT 1`,
-      [Number(id)]
+      [facultyId]
     );
 
     return rows[0] ? { ...rows[0], role: "FACULTY" } : null;
