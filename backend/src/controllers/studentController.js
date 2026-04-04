@@ -93,6 +93,7 @@ async function getStudentDetails(req, res, next) {
       `SELECT ta_id, role, term_number
        FROM TA_ASSIGNMENT
        WHERE student_id = ?
+         AND status = 'Accepted'
        LIMIT 1`,
       [studentId]
     );
@@ -1050,14 +1051,18 @@ async function enrollCourse(req, res, next) {
       // Insert placeholder transcript row for the enrolled course
       await connection.execute(
         `INSERT INTO ACADEMIC_TRANSCRIPT (student_id, course_id, term_number)
-         VALUES (?, ?, ?)`,
+         VALUES (?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+           term_number = VALUES(term_number)`,
         [studentId, offering.course_id, offering.term_number]
       );
 
       // Insert initial attendance row for the enrolled course
       await connection.execute(
         `INSERT INTO ATTENDANCE (student_id, offering_id, classes_attended_count)
-         VALUES (?, ?, 0)`,
+         VALUES (?, ?, 0)
+         ON DUPLICATE KEY UPDATE
+           classes_attended_count = classes_attended_count`,
         [studentId, offeringId]
       );
 
@@ -1251,8 +1256,8 @@ async function applyTAEnrollment(req, res, next) {
     }
 
     const [insertResult] = await pool.execute(
-      `INSERT INTO TA_ASSIGNMENT (student_id, faculty_id, term_number, offering_id, role)
-       VALUES (?, ?, ?, NULL, 'Department TA')`,
+      `INSERT INTO TA_ASSIGNMENT (student_id, faculty_id, term_number, offering_id, role, status)
+       VALUES (?, ?, ?, NULL, 'Department TA', 'Pending')`,
       [studentId, facultyId, currentTermNumber]
     );
 
@@ -1262,7 +1267,8 @@ async function applyTAEnrollment(req, res, next) {
       facultyId,
       facultyName: faculty.name,
       termNumber: currentTermNumber,
-      role: "Department TA"
+      role: "Department TA",
+      status: "Pending"
     });
   } catch (error) {
     next(error);
@@ -1391,8 +1397,9 @@ async function getStudentNotifications(req, res, next) {
     const studentId = req.user.id;
 
     const [rows] = await pool.execute(
-      `SELECT n.notification_id, n.message, n.created_at
+      `SELECT n.notification_id, n.message, n.created_at, n.sent_by, f.name AS sender_name
        FROM NOTIFICATION n
+       LEFT JOIN FACULTY f ON f.faculty_id = n.sent_by
        WHERE n.id = ?
           OR EXISTS (
             SELECT 1
@@ -1438,7 +1445,9 @@ async function getStudentNotifications(req, res, next) {
     const notifications = rows.map((row) => ({
       notificationId: row.notification_id,
       message: row.message,
-      createdAt: row.created_at
+      createdAt: row.created_at,
+      sentBy: row.sent_by,
+      senderName: row.sender_name || null
     }));
 
     res.status(200).json({

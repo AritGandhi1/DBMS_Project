@@ -12,7 +12,17 @@ const pages = [
   AttendancePage,
   ExamPage,
   FeedbackPage,
-  LeavePage
+  LeavePage,
+  MarksUpdatePage,
+  AttendanceUpdatePage,
+  SendNotificationPage,
+  TAEnrollmentPage,
+  FALeavePage,
+  CDCInternshipsPage,
+  CDCPlacementsPage,
+  TTCoursePage,
+  TTExamPage,
+  HODCoursesPage
 ];
 
 const Router = {
@@ -84,6 +94,7 @@ const Router = {
           return `
             <div class="notification-item">
               <div class="notification-message">${item.message}</div>
+              <div class="notification-time">From: ${item.senderName || item.sentBy || 'Unknown'}</div>
               <div class="notification-time">${when}</div>
             </div>
           `;
@@ -102,6 +113,44 @@ const Router = {
     try {
       // Normalize route from values like '#/dashboard', '/dashboard', or 'dashboard'
       const route = String(path || '').replace(/^#?\/?/, '') || '';
+      const user = Auth.getUser();
+      const role = user?.role || "STUDENT";
+      const isFacultyAdvisor = role === "FACULTY" ? Boolean(user?.isFacultyAdvisor) : false;
+      const isPicCdc = role === "FACULTY" && String(user?.facultyDesignation || "").toUpperCase() === "PIC_CDC";
+      const isPicTt = role === "FACULTY" && String(user?.facultyDesignation || "").toUpperCase() === "PIC_TT";
+      const isHod = role === "FACULTY" && String(user?.facultyDesignation || "").toUpperCase() === "HOD";
+
+      const facultyRoutes = ['dashboard', 'marks-update', 'attendance-update', 'send-notification', 'ta-enrollment'];
+      if (isFacultyAdvisor) {
+        facultyRoutes.push('fa-leave');
+      }
+      if (isPicCdc) {
+        facultyRoutes.push('cdc-internships', 'cdc-placements');
+      }
+      if (isPicTt) {
+        facultyRoutes.push('tt-course', 'tt-exam');
+      }
+      if (isHod) {
+        facultyRoutes.push('hod-courses');
+      }
+
+      const allowedRoutes = {
+        STUDENT: [
+          'dashboard',
+          'enrollment',
+          'courses',
+          'timetable',
+          'exam',
+          'transcript',
+          'result',
+          'attendance',
+          'feedback',
+          'internships',
+          'placements',
+          'leave'
+        ],
+        FACULTY: facultyRoutes
+      };
 
       // Check authentication and redirect if needed
       if (!Auth.isAuthenticated()) {
@@ -114,6 +163,17 @@ const Router = {
         }
       } else {
         if (route === 'login' || route === 'register' || route === '') {
+          if (window.location.hash !== '#/dashboard') {
+            window.location.hash = '#/dashboard';
+          }
+          this.isNavigating = false;
+          return;
+        }
+      }
+
+      if (Auth.isAuthenticated() && route && route !== 'login' && route !== 'register') {
+        const roleRoutes = allowedRoutes[role] || ['dashboard'];
+        if (!roleRoutes.includes(route)) {
           if (window.location.hash !== '#/dashboard') {
             window.location.hash = '#/dashboard';
           }
@@ -135,7 +195,9 @@ const Router = {
       if (Auth.isAuthenticated() && page.id !== 'login' && page.id !== 'register') {
         // Render header for authenticated users
         app.innerHTML = this.renderHeader(route) + '<div id="page-content"></div>';
-        this.loadNotifications();
+        if (role === 'STUDENT') {
+          this.loadNotifications();
+        }
       } else {
         app.innerHTML = '<div id="page-content"></div>';
       }
@@ -160,16 +222,18 @@ const Router = {
 
   renderHeader(activeRoute) {
     const user = Auth.getUser();
+    const isFaculty = user?.role === 'FACULTY';
+    const isFacultyAdvisor = isFaculty ? Boolean(user?.isFacultyAdvisor) : false;
+    const isPicCdc = isFaculty && String(user?.facultyDesignation || '').toUpperCase() === 'PIC_CDC';
+    const isPicTt = isFaculty && String(user?.facultyDesignation || '').toUpperCase() === 'PIC_TT';
+    const isHod = isFaculty && String(user?.facultyDesignation || '').toUpperCase() === 'HOD';
     const activeClass = (routeName) => activeRoute === routeName ? 'active' : '';
     const academicsActive = ['courses', 'timetable', 'transcript', 'result', 'attendance', 'exam', 'feedback'].includes(activeRoute);
     const cdcActive = ['internships', 'placements'].includes(activeRoute);
+    const facultyAcademicsActive = ['marks-update', 'attendance-update', 'ta-enrollment'].includes(activeRoute);
+    const facultyTimetableActive = ['tt-course', 'tt-exam'].includes(activeRoute);
 
-    return `
-      <div class="header">
-        <div class="header-content">
-          <div class="logo">DBMS Portal</div>
-          <div class="nav">
-            <a href="#/dashboard" class="nav-link ${activeClass('dashboard')}">Dashboard</a>
+    const studentNav = `
             <a href="#/enrollment" class="nav-link ${activeClass('enrollment')}">Enrollment</a>
             <div class="nav-dropdown ${academicsActive ? 'active' : ''}">
               <button type="button" class="nav-dropdown-toggle">Academics</button>
@@ -191,15 +255,9 @@ const Router = {
               </div>
             </div>
             <a href="#/leave" class="nav-link ${activeClass('leave')}">Leave</a>
-          </div>
-          <div class="mobile-nav-wrap">
-            <button class="mobile-menu-btn" onclick="Router.toggleMobileMenu()" aria-label="Open navigation menu">
-              <span></span>
-              <span></span>
-              <span></span>
-            </button>
-            <div id="mobileMenuDropdown" class="mobile-menu-dropdown ${this.mobileMenuOpen ? 'open' : ''}">
-              <button class="mobile-menu-item ${activeClass('dashboard')}" onclick="Router.goToRoute('dashboard')">Dashboard</button>
+    `;
+
+    const studentMobileNav = `
               <button class="mobile-menu-item ${activeClass('enrollment')}" onclick="Router.goToRoute('enrollment')">Enrollment</button>
               <details class="mobile-menu-group ${academicsActive ? 'active' : ''}">
                 <summary class="mobile-menu-item">Academics</summary>
@@ -221,10 +279,89 @@ const Router = {
                 </div>
               </details>
               <button class="mobile-menu-item ${activeClass('leave')}" onclick="Router.goToRoute('leave')">Leave</button>
+    `;
+
+    const facultyNav = `
+            <div class="nav-dropdown ${facultyAcademicsActive ? 'active' : ''}">
+              <button type="button" class="nav-dropdown-toggle">Academics</button>
+              <div class="nav-dropdown-menu">
+                <a href="#/marks-update" class="nav-link ${activeClass('marks-update')}">Marks Updating</a>
+                <a href="#/attendance-update" class="nav-link ${activeClass('attendance-update')}">Attendance Updating</a>
+                <a href="#/ta-enrollment" class="nav-link ${activeClass('ta-enrollment')}">TA Enrollment</a>
+              </div>
             </div>
-          </div>
-          <div class="user-info">
-            <span class="user-name">${user?.name || 'User'}</span>
+            ${isFacultyAdvisor ? `
+            <div class="nav-dropdown ${activeClass('fa-leave') === 'active' ? 'active' : ''}">
+              <button type="button" class="nav-dropdown-toggle">FA</button>
+              <div class="nav-dropdown-menu">
+                <a href="#/fa-leave" class="nav-link ${activeClass('fa-leave')}">Leave Applications</a>
+              </div>
+            </div>
+            ` : ''}
+            ${isPicCdc ? `
+            <div class="nav-dropdown ${['cdc-internships', 'cdc-placements'].includes(activeRoute) ? 'active' : ''}">
+              <button type="button" class="nav-dropdown-toggle">CDC</button>
+              <div class="nav-dropdown-menu">
+                <a href="#/cdc-internships" class="nav-link ${activeClass('cdc-internships')}">Internships</a>
+                <a href="#/cdc-placements" class="nav-link ${activeClass('cdc-placements')}">Placements</a>
+              </div>
+            </div>
+            ` : ''}
+            ${isPicTt ? `
+            <div class="nav-dropdown ${facultyTimetableActive ? 'active' : ''}">
+              <button type="button" class="nav-dropdown-toggle">Time Table</button>
+              <div class="nav-dropdown-menu">
+                <a href="#/tt-course" class="nav-link ${activeClass('tt-course')}">Course Time Table</a>
+                <a href="#/tt-exam" class="nav-link ${activeClass('tt-exam')}">Exam Time Table</a>
+              </div>
+            </div>
+            ` : ''}
+            ${isHod ? `<a href="#/hod-courses" class="nav-link ${activeClass('hod-courses')}">Courses</a>` : ''}
+            <a href="#/send-notification" class="nav-link ${activeClass('send-notification')}">Send Notification</a>
+    `;
+
+    const facultyMobileNav = `
+              <details class="mobile-menu-group ${facultyAcademicsActive ? 'active' : ''}">
+                <summary class="mobile-menu-item">Academics</summary>
+                <div class="mobile-submenu">
+                  <button class="mobile-menu-item ${activeClass('marks-update')}" onclick="Router.goToRoute('marks-update')">Marks Updating</button>
+                  <button class="mobile-menu-item ${activeClass('attendance-update')}" onclick="Router.goToRoute('attendance-update')">Attendance Updating</button>
+                  <button class="mobile-menu-item ${activeClass('ta-enrollment')}" onclick="Router.goToRoute('ta-enrollment')">TA Enrollment</button>
+                </div>
+              </details>
+              ${isFacultyAdvisor ? `
+              <details class="mobile-menu-group ${activeClass('fa-leave') === 'active' ? 'active' : ''}">
+                <summary class="mobile-menu-item">FA</summary>
+                <div class="mobile-submenu">
+                  <button class="mobile-menu-item ${activeClass('fa-leave')}" onclick="Router.goToRoute('fa-leave')">Leave Applications</button>
+                </div>
+              </details>
+              ` : ''}
+              ${isPicCdc ? `
+              <details class="mobile-menu-group ${['cdc-internships', 'cdc-placements'].includes(activeRoute) ? 'active' : ''}">
+                <summary class="mobile-menu-item">CDC</summary>
+                <div class="mobile-submenu">
+                  <button class="mobile-menu-item ${activeClass('cdc-internships')}" onclick="Router.goToRoute('cdc-internships')">Internships</button>
+                  <button class="mobile-menu-item ${activeClass('cdc-placements')}" onclick="Router.goToRoute('cdc-placements')">Placements</button>
+                </div>
+              </details>
+              ` : ''}
+              ${isPicTt ? `
+              <details class="mobile-menu-group ${facultyTimetableActive ? 'active' : ''}">
+                <summary class="mobile-menu-item">Time Table</summary>
+                <div class="mobile-submenu">
+                  <button class="mobile-menu-item ${activeClass('tt-course')}" onclick="Router.goToRoute('tt-course')">Course Time Table</button>
+                  <button class="mobile-menu-item ${activeClass('tt-exam')}" onclick="Router.goToRoute('tt-exam')">Exam Time Table</button>
+                </div>
+              </details>
+              ` : ''}
+              ${isHod ? `<button class="mobile-menu-item ${activeClass('hod-courses')}" onclick="Router.goToRoute('hod-courses')">Courses</button>` : ''}
+              <button class="mobile-menu-item ${activeClass('send-notification')}" onclick="Router.goToRoute('send-notification')">Send Notification</button>
+    `;
+
+    const notifications = isFaculty
+      ? ''
+      : `
             <div class="notification-wrap" id="notificationWrap">
               <button type="button" class="notification-btn" onclick="Router.toggleNotifications()" aria-label="Notifications">
                 <span class="notification-icon">\uD83D\uDD14</span>
@@ -237,6 +374,30 @@ const Router = {
                 </div>
               </div>
             </div>
+      `;
+
+    return `
+      <div class="header">
+        <div class="header-content">
+          <div class="logo">DBMS Portal</div>
+          <div class="nav">
+            <a href="#/dashboard" class="nav-link ${activeClass('dashboard')}">Dashboard</a>
+            ${isFaculty ? facultyNav : studentNav}
+          </div>
+          <div class="mobile-nav-wrap">
+            <button class="mobile-menu-btn" onclick="Router.toggleMobileMenu()" aria-label="Open navigation menu">
+              <span></span>
+              <span></span>
+              <span></span>
+            </button>
+            <div id="mobileMenuDropdown" class="mobile-menu-dropdown ${this.mobileMenuOpen ? 'open' : ''}">
+              <button class="mobile-menu-item ${activeClass('dashboard')}" onclick="Router.goToRoute('dashboard')">Dashboard</button>
+              ${isFaculty ? facultyMobileNav : studentMobileNav}
+            </div>
+          </div>
+          <div class="user-info">
+            <span class="user-name">${user?.name || 'User'}</span>
+            ${notifications}
             <button class="btn btn-secondary" onclick="Auth.logout()">Logout</button>
           </div>
         </div>

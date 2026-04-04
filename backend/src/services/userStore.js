@@ -86,7 +86,15 @@ async function findUserForLogin(userId) {
     `SELECT faculty_id AS id,
             name,
             email,
-            password AS passwordHash
+            password AS passwordHash,
+            role AS facultyDesignation,
+            department,
+            EXISTS (
+              SELECT 1
+              FROM STUDENT s
+              WHERE s.advisor_id = FACULTY.faculty_id
+              LIMIT 1
+            ) AS isFacultyAdvisor
      FROM FACULTY
      WHERE faculty_id = ?
      LIMIT 1`,
@@ -199,7 +207,15 @@ async function findUserByIdAndRole(id, role) {
       `SELECT faculty_id AS id,
               name,
               email,
-              password AS passwordHash
+              password AS passwordHash,
+              role AS facultyDesignation,
+              department,
+              EXISTS (
+                SELECT 1
+                FROM STUDENT s
+                WHERE s.advisor_id = FACULTY.faculty_id
+                LIMIT 1
+              ) AS isFacultyAdvisor
        FROM FACULTY
        WHERE faculty_id = ?
        LIMIT 1`,

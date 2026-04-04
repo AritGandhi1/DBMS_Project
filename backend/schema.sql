@@ -242,6 +242,8 @@ CREATE TABLE TA_ASSIGNMENT (
     offering_id INT NULL,
 
     role VARCHAR(50),
+    status ENUM('Pending','Accepted','Rejected') DEFAULT 'Pending',
+    applied_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 
     FOREIGN KEY (student_id) REFERENCES STUDENT(student_id)
         ON DELETE CASCADE,
@@ -331,6 +333,7 @@ CREATE TABLE PAYMENT (
 CREATE TABLE NOTIFICATION (
     notification_id INT AUTO_INCREMENT PRIMARY KEY,
     id VARCHAR(10) NOT NULL,
+    sent_by VARCHAR(10) NOT NULL,
 
     message TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -461,11 +464,30 @@ CREATE TABLE ACADEMIC_TRANSCRIPT (
 INSERT INTO ADMIN (admin_id, username, password) VALUES
     (1, 'admin', 'admin123');
 
-INSERT INTO FACULTY (faculty_id, password, name, email, phone, department) VALUES
-    ('CS01', 'faculty123', 'Dr. Meera Nair', 'meera.nair@university.edu', '9876543210', 'Computer Science'),
-    ('IT01', 'faculty123', 'Dr. Rohan Iyer', 'rohan.iyer@university.edu', '9876543211', 'Information Technology'),
-    ('EC01', 'faculty123', 'Dr. Kavya Menon', 'kavya.menon@university.edu', '9876543212', 'Electronics and Communication'),
-    ('ME01', 'faculty123', 'Dr. Arjun Das', 'arjun.das@university.edu', '9876543213', 'Mechanical Engineering');
+INSERT INTO FACULTY (faculty_id, password, role, name, email, phone, department) VALUES
+    ('CS01', 'faculty123', 'Faculty', 'Dr. Meera Nair', 'meera.nair@university.edu', '9876543210', 'CSE'),
+    ('CSHOD', 'faculty123', 'HOD', 'Dr. Neel Khanna', 'neel.khanna@university.edu', '9876543220', 'CSE'),
+    ('CSTT1', 'faculty123', 'PIC_TT', 'Dr. Sana Mirza', 'sana.mirza@university.edu', '9876543221', 'CSE'),
+    ('CSCDC', 'faculty123', 'PIC_CDC', 'Dr. Arpit Sen', 'arpit.sen@university.edu', '9876543222', 'CSE'),
+    ('CSF02', 'faculty123', 'Faculty', 'Dr. Priya Anand', 'priya.anand@university.edu', '9876543223', 'CSE'),
+
+    ('IT01', 'faculty123', 'Faculty', 'Dr. Rohan Iyer', 'rohan.iyer@university.edu', '9876543211', 'IT'),
+    ('ITHOD', 'faculty123', 'HOD', 'Dr. Ishita Rao', 'ishita.rao@university.edu', '9876543230', 'IT'),
+    ('ITTT1', 'faculty123', 'PIC_TT', 'Dr. Vinay Kulkarni', 'vinay.kulkarni@university.edu', '9876543231', 'IT'),
+    ('ITCDC', 'faculty123', 'PIC_CDC', 'Dr. Nidhi Arora', 'nidhi.arora@university.edu', '9876543232', 'IT'),
+    ('ITF02', 'faculty123', 'Faculty', 'Dr. Aman Bedi', 'aman.bedi@university.edu', '9876543233', 'IT'),
+
+    ('EC01', 'faculty123', 'Faculty', 'Dr. Kavya Menon', 'kavya.menon@university.edu', '9876543212', 'ECE'),
+    ('ECHOD', 'faculty123', 'HOD', 'Dr. Pranav Pillai', 'pranav.pillai@university.edu', '9876543240', 'ECE'),
+    ('ECTT1', 'faculty123', 'PIC_TT', 'Dr. Mitali Deshpande', 'mitali.deshpande@university.edu', '9876543241', 'ECE'),
+    ('ECCDC', 'faculty123', 'PIC_CDC', 'Dr. Harsh Vora', 'harsh.vora@university.edu', '9876543242', 'ECE'),
+    ('ECF02', 'faculty123', 'Faculty', 'Dr. Isha Mathew', 'isha.mathew@university.edu', '9876543243', 'ECE'),
+
+    ('ME01', 'faculty123', 'Faculty', 'Dr. Arjun Das', 'arjun.das@university.edu', '9876543213', 'ME'),
+    ('MEHOD', 'faculty123', 'HOD', 'Dr. Ketan Joshi', 'ketan.joshi@university.edu', '9876543250', 'ME'),
+    ('METT1', 'faculty123', 'PIC_TT', 'Dr. Neha Kulshreshtha', 'neha.kulshreshtha@university.edu', '9876543251', 'ME'),
+    ('MECDC', 'faculty123', 'PIC_CDC', 'Dr. Tushar Nene', 'tushar.nene@university.edu', '9876543252', 'ME'),
+    ('MEF02', 'faculty123', 'Faculty', 'Dr. Ritu Mahajan', 'ritu.mahajan@university.edu', '9876543253', 'ME');
 
 INSERT INTO STUDENT (
     student_id,
@@ -592,9 +614,9 @@ INSERT INTO FEEDBACK (feedback_id, student_id, offering_id, rating, comment, sub
     (3, '23IT01', 5, 4, 'Interactive classes and good notes.', '2025-11-22'),
     (4, '23EC01', 8, 5, 'Well structured and exam-focused teaching.', '2026-04-08');
 
-INSERT INTO TA_ASSIGNMENT (ta_id, student_id, faculty_id, term_number, offering_id, role) VALUES
-    (1, '23CS02', 'CS01', 2, 3, 'Lab TA'),
-    (2, '23IT01', 'IT01', 1, 6, 'Course TA');
+INSERT INTO TA_ASSIGNMENT (ta_id, student_id, faculty_id, term_number, offering_id, role, status) VALUES
+    (1, '23CS02', 'CS01', 2, 3, 'Lab TA', 'Accepted'),
+    (2, '23IT01', 'IT01', 1, 6, 'Course TA', 'Accepted');
 
 INSERT INTO CGPA (student_id, cgpa) VALUES
     ('23CS01', 8.75),
@@ -626,14 +648,14 @@ INSERT INTO PAYMENT (payment_id, student_id, payment_type, term_number, amount, 
     (3, '23IT01', 'Tuition', 1, 46000.00, '2025-08-16', 'Paid'),
     (4, '23EC01', 'Tuition', 2, 45500.00, '2026-01-16', 'Pending');
 
-INSERT INTO NOTIFICATION (notification_id, id, message, created_at) VALUES
-    (1, '23CS01', 'Mid-semester exam schedule published.', '2026-04-02 09:00:00'),
-    (2, '23CS02', 'Fee payment reminder for Spring term.', '2026-01-20 12:00:00'),
-    (3, '23IT01', 'Project review scheduled for next week.', '2025-10-02 10:00:00'),
-    (4, '23EC01', 'Lab timetable updated for term 2.', '2026-02-03 15:00:00'),
-    (5, 'CS101', 'Dummy course notification: CS101 quiz this Friday.', '2026-04-03 08:30:00'),
-    (6, '23CS01', 'Dummy personal notification for testing red dot.', '2026-04-03 09:15:00'),
-    (7, 'CS01', 'Dummy FA notification: Meet your advisor this week.', '2026-04-03 10:00:00');
+INSERT INTO NOTIFICATION (notification_id, id, sent_by, message, created_at) VALUES
+    (1, '23CS01', 'CS01', 'Mid-semester exam schedule published.', '2026-04-02 09:00:00'),
+    (2, '23CS02', 'IT01', 'Fee payment reminder for Spring term.', '2026-01-20 12:00:00'),
+    (3, '23IT01', 'IT01', 'Project review scheduled for next week.', '2025-10-02 10:00:00'),
+    (4, '23EC01', 'EC01', 'Lab timetable updated for term 2.', '2026-02-03 15:00:00'),
+    (5, 'CS101', 'CS01', 'Dummy course notification: CS101 quiz this Friday.', '2026-04-03 08:30:00'),
+    (6, '23CS01', 'CS01', 'Dummy personal notification for testing red dot.', '2026-04-03 09:15:00'),
+    (7, 'CS01', 'CS01', 'Dummy FA notification: Meet your advisor this week.', '2026-04-03 10:00:00');
 
 INSERT INTO INTERNSHIP_OPENING (opening_id, company, role, stipend, duration_months, is_active) VALUES
     (1, 'InnovaTech', 'Software Intern', 18000.00, 3.0, 1),

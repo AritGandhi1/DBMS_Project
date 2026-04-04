@@ -14,7 +14,10 @@ function buildUserResponse(user) {
     id: user.id,
     role: user.role,
     name: user.name,
-    email: user.email
+    email: user.email,
+    isFacultyAdvisor: user.role === "FACULTY" ? Boolean(user.isFacultyAdvisor) : false,
+    facultyDesignation: user.role === "FACULTY" ? user.facultyDesignation || null : null,
+    department: user.role === "FACULTY" ? user.department || null : null
   };
 }
 
