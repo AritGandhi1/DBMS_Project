@@ -13,13 +13,16 @@ const {
 	getFacultyNotificationFeed,
 	getFacultyTAApplications,
 	decideFacultyTAApplication,
+	downloadFacultyTAResume,
 	getFacultyLeaveApplications,
 	decideFacultyLeaveApplication,
 	getCdcInternshipManagement,
 	createCdcInternshipOpening,
+	updateCdcInternshipOpening,
 	decideCdcInternshipApplication,
 	getCdcPlacementManagement,
 	createCdcPlacementOpening,
+	updateCdcPlacementOpening,
 	decideCdcPlacementApplication,
 	getPicTtCourseTimetable,
 	createPicTtCourseTimetable,
@@ -52,13 +55,16 @@ router.post("/notifications", authenticate, sendFacultyNotification);
 router.get("/notifications", authenticate, getFacultyNotificationFeed);
 router.get("/ta-applications", authenticate, getFacultyTAApplications);
 router.post("/ta-applications/:taId/decision", authenticate, decideFacultyTAApplication);
+router.get("/ta-applications/:taId/resume", authenticate, downloadFacultyTAResume);
 router.get("/leave-applications", authenticate, getFacultyLeaveApplications);
 router.post("/leave-applications/:leaveId/decision", authenticate, decideFacultyLeaveApplication);
 router.get("/cdc/internships", authenticate, getCdcInternshipManagement);
 router.post("/cdc/internships/openings", authenticate, createCdcInternshipOpening);
+router.put("/cdc/internships/openings/:openingId", authenticate, updateCdcInternshipOpening);
 router.post("/cdc/internships/applications/:internshipId/decision", authenticate, decideCdcInternshipApplication);
 router.get("/cdc/placements", authenticate, getCdcPlacementManagement);
 router.post("/cdc/placements/openings", authenticate, createCdcPlacementOpening);
+router.put("/cdc/placements/openings/:openingId", authenticate, updateCdcPlacementOpening);
 router.post("/cdc/placements/applications/:placementId/decision", authenticate, decideCdcPlacementApplication);
 router.get("/tt/courses", authenticate, getPicTtCourseTimetable);
 router.post("/tt/courses", authenticate, createPicTtCourseTimetable);

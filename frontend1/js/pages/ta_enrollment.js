@@ -60,6 +60,7 @@ const TAEnrollmentPage = {
                       <td>${app.role}</td>
                       <td>${app.status}</td>
                       <td>
+                        ${app.resumeId ? `<button class="btn btn-secondary" data-ta-resume-id="${app.taId}" style="margin-right:8px;">View Resume</button>` : ""}
                         ${app.status === 'Pending' ? `
                           <button class="btn btn-primary" data-ta-action="accept" data-ta-id="${app.taId}" style="margin-right:8px;">Accept</button>
                           <button class="btn btn-danger" data-ta-action="reject" data-ta-id="${app.taId}">Reject</button>
@@ -84,6 +85,20 @@ const TAEnrollmentPage = {
               await loadApplications();
             } catch (error) {
               setMessage("error", error.message);
+            }
+          });
+        });
+
+        tableEl.querySelectorAll("button[data-ta-resume-id]").forEach((button) => {
+          button.addEventListener("click", async () => {
+            const taId = button.dataset.taResumeId;
+            try {
+              const blob = await API.downloadFacultyTAResume(taId);
+              const url = window.URL.createObjectURL(blob);
+              window.open(url, "_blank", "noopener,noreferrer");
+              setTimeout(() => window.URL.revokeObjectURL(url), 60 * 1000);
+            } catch (error) {
+              setMessage("error", error.message || "Failed to open resume");
             }
           });
         });

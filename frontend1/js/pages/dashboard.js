@@ -13,6 +13,7 @@ const DashboardPage = {
               <tr>
                 <th>Course ID</th>
                 <th>Course Name</th>
+                <th>Term</th>
               </tr>
             </thead>
             <tbody>
@@ -22,6 +23,7 @@ const DashboardPage = {
                     <tr>
                       <td>${course.courseId}</td>
                       <td>${course.courseName}</td>
+                      <td>${course.termNumber || "-"}</td>
                     </tr>
                   `
                 )
@@ -29,7 +31,7 @@ const DashboardPage = {
             </tbody>
           </table>
         `
-      : '<div class="message info">No courses assigned for the current term.</div>';
+      : '<div class="message info">No courses assigned to you yet.</div>';
 
     const taMarkup = tas.length
       ? `
@@ -87,12 +89,8 @@ const DashboardPage = {
         </div>
 
         <div class="dashboard-grid">
-          <div class="stat-card">
-            <div class="stat-label">Current Term</div>
-            <div class="stat-value" style="font-size: 18px; color: #333;">${data.currentTermNumber ? `Term ${data.currentTermNumber}` : "N/A"}</div>
-          </div>
           <div class="stat-card success">
-            <div class="stat-label">Courses This Term</div>
+            <div class="stat-label">Total Courses</div>
             <div class="stat-value">${courses.length}</div>
           </div>
           <div class="stat-card info">
@@ -102,7 +100,7 @@ const DashboardPage = {
         </div>
 
         <div class="card">
-          <div class="card-title">Courses This Semester</div>
+          <div class="card-title">All Courses</div>
           ${coursesMarkup}
         </div>
 

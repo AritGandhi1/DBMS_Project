@@ -68,8 +68,8 @@ class API {
     return this.call("GET", "/student/ta-enrollment-options");
   }
 
-  static async applyTAEnrollment(facultyId) {
-    return this.call("POST", "/student/ta-enroll", { facultyId });
+  static async applyTAEnrollment(facultyId, resumeId) {
+    return this.call("POST", "/student/ta-enroll", { facultyId, resumeId });
   }
 
   static async getTranscript() {
@@ -92,16 +92,16 @@ class API {
     return this.call("GET", "/student/internships");
   }
 
-  static async applyInternship(openingId) {
-    return this.call("POST", "/student/internships/apply", { openingId });
+  static async applyInternship(openingId, resumeId) {
+    return this.call("POST", "/student/internships/apply", { openingId, resumeId });
   }
 
   static async getPlacements() {
     return this.call("GET", "/student/placements");
   }
 
-  static async applyPlacement(openingId) {
-    return this.call("POST", "/student/placements/apply", { openingId });
+  static async applyPlacement(openingId, resumeId) {
+    return this.call("POST", "/student/placements/apply", { openingId, resumeId });
   }
 
   static async getTimetable() {
@@ -127,6 +127,34 @@ class API {
 
   static async getPastLeaveApplications() {
     return this.call("GET", "/student/leave-application/past");
+  }
+
+  // Resume management endpoints
+  static async uploadResume(fileName, fileData) {
+    return this.call("POST", "/student/resume/upload", { fileName, fileData });
+  }
+
+  static async getStudentResumes() {
+    return this.call("GET", "/student/resume/list");
+  }
+
+  static async deleteResume(resumeId) {
+    return this.call("POST", "/student/resume/delete", { resumeId });
+  }
+
+  static async downloadResume(resumeId) {
+    const token = localStorage.getItem("auth_token");
+    const response = await fetch(`${API_BASE_URL}/student/resume/download/${resumeId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to download resume");
+    }
+
+    return response.blob();
   }
 
   // Faculty endpoints
@@ -174,6 +202,28 @@ class API {
     return this.call("POST", `/faculty/ta-applications/${taId}/decision`, { action });
   }
 
+  static async downloadFacultyTAResume(taId) {
+    const token = localStorage.getItem("auth_token");
+    const response = await fetch(`${API_BASE_URL}/faculty/ta-applications/${taId}/resume`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      let errorMessage = "Failed to fetch resume";
+      try {
+        const json = await response.json();
+        errorMessage = json.message || errorMessage;
+      } catch (_) {
+        // Keep fallback message for non-JSON responses.
+      }
+      throw new Error(errorMessage);
+    }
+
+    return response.blob();
+  }
+
   static async getFacultyLeaveApplications() {
     return this.call("GET", "/faculty/leave-applications");
   }
@@ -190,6 +240,10 @@ class API {
     return this.call("POST", "/faculty/cdc/internships/openings", payload);
   }
 
+  static async updateCdcInternshipOpening(openingId, payload) {
+    return this.call("PUT", `/faculty/cdc/internships/openings/${openingId}`, payload);
+  }
+
   static async decideCdcInternshipApplication(internshipId, action) {
     return this.call("POST", `/faculty/cdc/internships/applications/${internshipId}/decision`, { action });
   }
@@ -200,6 +254,10 @@ class API {
 
   static async createCdcPlacementOpening(payload) {
     return this.call("POST", "/faculty/cdc/placements/openings", payload);
+  }
+
+  static async updateCdcPlacementOpening(openingId, payload) {
+    return this.call("PUT", `/faculty/cdc/placements/openings/${openingId}`, payload);
   }
 
   static async decideCdcPlacementApplication(placementId, action) {

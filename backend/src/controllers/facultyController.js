@@ -97,6 +97,31 @@ async function assertFacultyInDepartment(facultyId, department) {
   }
 }
 
+function parseOpeningFilePayload(fileName, fileData) {
+  if (!fileName && !fileData) {
+    return null;
+  }
+
+  if (!fileName || !fileData) {
+    const error = new Error("fileName and fileData are required when uploading a file");
+    error.status = 400;
+    throw error;
+  }
+
+  const fileSize = Buffer.byteLength(fileData, "base64");
+  if (fileSize > 5 * 1024 * 1024) {
+    const error = new Error("File size exceeds 5MB limit");
+    error.status = 400;
+    throw error;
+  }
+
+  return {
+    fileName: String(fileName).trim(),
+    fileData: Buffer.from(fileData, "base64"),
+    fileSize
+  };
+}
+
 async function getFacultyDashboard(req, res, next) {
   try {
     ensureFacultyRole(req);
@@ -126,14 +151,14 @@ async function getFacultyDashboard(req, res, next) {
     const [courseRows] = await pool.execute(
       `SELECT
         co.offering_id,
+        co.term_number,
         c.course_id,
         c.course_name
        FROM COURSE_OFFERING co
        JOIN COURSE c ON c.course_id = co.course_id
        WHERE co.faculty_id = ?
-         AND co.term_number = ?
-       ORDER BY c.course_id`,
-      [facultyId, currentTermNumber]
+       ORDER BY co.term_number DESC, c.course_id`,
+      [facultyId]
     );
 
     const [taRows] = await pool.execute(
@@ -164,6 +189,7 @@ async function getFacultyDashboard(req, res, next) {
       },
       courses: courseRows.map((row) => ({
         offeringId: row.offering_id,
+        termNumber: row.term_number,
         courseId: row.course_id,
         courseName: row.course_name
       })),
@@ -734,6 +760,7 @@ async function getFacultyTAApplications(req, res, next) {
         s.branch,
         s.college_email,
         ta.term_number,
+        ta.resume_id,
         ta.role,
         ta.status,
         ta.applied_at
@@ -756,6 +783,7 @@ async function getFacultyTAApplications(req, res, next) {
         branch: row.branch,
         collegeEmail: row.college_email,
         termNumber: row.term_number,
+        resumeId: row.resume_id,
         role: row.role,
         status: row.status,
         appliedAt: row.applied_at
@@ -824,6 +852,58 @@ async function decideFacultyTAApplication(req, res, next) {
       taId,
       status: nextStatus
     });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function downloadFacultyTAResume(req, res, next) {
+  try {
+    ensureFacultyRole(req);
+
+    const facultyId = String(req.user.id || "").trim();
+    const taId = Number(req.params.taId);
+
+    if (Number.isNaN(taId)) {
+      const error = new Error("taId must be numeric");
+      error.status = 400;
+      throw error;
+    }
+
+    const [rows] = await pool.execute(
+      `SELECT
+        ta.ta_id,
+        ta.resume_id,
+        sr.file_name,
+        sr.file_data,
+        sr.is_deleted
+       FROM TA_ASSIGNMENT ta
+       LEFT JOIN STUDENT_RESUME sr ON sr.resume_id = ta.resume_id
+       WHERE ta.ta_id = ?
+         AND ta.faculty_id = ?
+         AND ta.offering_id IS NULL
+       LIMIT 1`,
+      [taId, facultyId]
+    );
+
+    const record = rows[0];
+    if (!record) {
+      const error = new Error("TA application not found");
+      error.status = 404;
+      throw error;
+    }
+
+    if (!record.resume_id || !record.file_data || Number(record.is_deleted) === 1) {
+      const error = new Error("Resume not available for this TA application");
+      error.status = 404;
+      throw error;
+    }
+
+    const safeFileName = String(record.file_name || `ta-${taId}-resume.pdf`).replace(/[^a-zA-Z0-9._-]/g, "_");
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="${safeFileName}"`);
+    return res.send(record.file_data);
   } catch (error) {
     next(error);
   }
@@ -974,6 +1054,7 @@ async function getCdcInternshipManagement(req, res, next) {
         io.role,
         io.stipend,
         io.duration_months,
+        io.file_name,
         io.is_active
        FROM INTERNSHIP_OPENING io
        JOIN INTERNSHIP_BRANCH ib ON ib.opening_id = io.opening_id
@@ -1014,6 +1095,7 @@ async function getCdcInternshipManagement(req, res, next) {
         role: row.role,
         stipend: row.stipend,
         durationMonths: row.duration_months,
+        fileName: row.file_name,
         isActive: Boolean(row.is_active)
       })),
       applications: applicationRows.map((row) => ({
@@ -1041,7 +1123,7 @@ async function createCdcInternshipOpening(req, res, next) {
     ensurePicCdcRole(req);
 
     const department = String(req.user.department || "").trim().toUpperCase();
-    const { company, role, stipend, durationMonths } = req.body;
+    const { company, role, stipend, durationMonths, fileName, fileData } = req.body;
 
     if (!company || !role || stipend == null || durationMonths == null) {
       const error = new Error("company, role, stipend and durationMonths are required");
@@ -1049,14 +1131,24 @@ async function createCdcInternshipOpening(req, res, next) {
       throw error;
     }
 
+    const openingFile = parseOpeningFilePayload(fileName, fileData);
+
     const connection = await pool.getConnection();
     try {
       await connection.beginTransaction();
 
       const [result] = await connection.execute(
-        `INSERT INTO INTERNSHIP_OPENING (company, role, stipend, duration_months, is_active)
-         VALUES (?, ?, ?, ?, 1)`,
-        [String(company).trim(), String(role).trim(), Number(stipend), Number(durationMonths)]
+        `INSERT INTO INTERNSHIP_OPENING (company, role, stipend, duration_months, file_name, file_data, file_size, is_active)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
+        [
+          String(company).trim(),
+          String(role).trim(),
+          Number(stipend),
+          Number(durationMonths),
+          openingFile?.fileName || null,
+          openingFile?.fileData || null,
+          openingFile?.fileSize || null
+        ]
       );
 
       await connection.execute(
@@ -1078,6 +1170,111 @@ async function createCdcInternshipOpening(req, res, next) {
     } finally {
       connection.release();
     }
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function updateCdcInternshipOpening(req, res, next) {
+  try {
+    ensurePicCdcRole(req);
+
+    const department = String(req.user.department || "").trim().toUpperCase();
+    const openingId = Number(req.params.openingId);
+
+    if (Number.isNaN(openingId)) {
+      const error = new Error("openingId must be numeric");
+      error.status = 400;
+      throw error;
+    }
+
+    const [existingRows] = await pool.execute(
+      `SELECT io.opening_id
+       FROM INTERNSHIP_OPENING io
+       JOIN INTERNSHIP_BRANCH ib ON ib.opening_id = io.opening_id
+       WHERE io.opening_id = ?
+         AND UPPER(ib.branch) = ?
+       LIMIT 1`,
+      [openingId, department]
+    );
+
+    if (!existingRows[0]) {
+      const error = new Error("Internship opening not found in your department");
+      error.status = 404;
+      throw error;
+    }
+
+    const updates = [];
+    const values = [];
+
+    if (req.body.company != null && String(req.body.company).trim() !== "") {
+      updates.push("company = ?");
+      values.push(String(req.body.company).trim());
+    }
+
+    if (req.body.role != null && String(req.body.role).trim() !== "") {
+      updates.push("role = ?");
+      values.push(String(req.body.role).trim());
+    }
+
+    if (req.body.stipend != null && String(req.body.stipend).trim() !== "") {
+      const stipend = Number(req.body.stipend);
+      if (Number.isNaN(stipend) || stipend < 0) {
+        const error = new Error("stipend must be a valid non-negative number");
+        error.status = 400;
+        throw error;
+      }
+      updates.push("stipend = ?");
+      values.push(stipend);
+    }
+
+    if (req.body.durationMonths != null && String(req.body.durationMonths).trim() !== "") {
+      const durationMonths = Number(req.body.durationMonths);
+      if (Number.isNaN(durationMonths) || durationMonths <= 0) {
+        const error = new Error("durationMonths must be a positive number");
+        error.status = 400;
+        throw error;
+      }
+      updates.push("duration_months = ?");
+      values.push(durationMonths);
+    }
+
+    if (req.body.isActive != null) {
+      const normalizedIsActive = String(req.body.isActive).trim().toLowerCase();
+      if (!["0", "1", "true", "false"].includes(normalizedIsActive)) {
+        const error = new Error("isActive must be a boolean-like value");
+        error.status = 400;
+        throw error;
+      }
+      updates.push("is_active = ?");
+      values.push(["1", "true"].includes(normalizedIsActive) ? 1 : 0);
+    }
+
+    const openingFile = parseOpeningFilePayload(req.body.fileName, req.body.fileData);
+    if (openingFile) {
+      updates.push("file_name = ?", "file_data = ?", "file_size = ?");
+      values.push(openingFile.fileName, openingFile.fileData, openingFile.fileSize);
+    }
+
+    if (updates.length === 0) {
+      const error = new Error("At least one field is required to update");
+      error.status = 400;
+      throw error;
+    }
+
+    values.push(openingId);
+
+    await pool.execute(
+      `UPDATE INTERNSHIP_OPENING
+       SET ${updates.join(", ")}
+       WHERE opening_id = ?`,
+      values
+    );
+
+    res.status(200).json({
+      message: "Internship opening updated",
+      openingId
+    });
   } catch (error) {
     next(error);
   }
@@ -1164,6 +1361,7 @@ async function getCdcPlacementManagement(req, res, next) {
         po.company,
         po.role,
         po.ctc,
+        po.file_name,
         po.is_active
        FROM PLACEMENT_OPENING po
        JOIN PLACEMENT_BRANCH pb ON pb.opening_id = po.opening_id
@@ -1202,6 +1400,7 @@ async function getCdcPlacementManagement(req, res, next) {
         company: row.company,
         role: row.role,
         ctc: row.ctc,
+        fileName: row.file_name,
         isActive: Boolean(row.is_active)
       })),
       applications: applicationRows.map((row) => ({
@@ -1228,7 +1427,7 @@ async function createCdcPlacementOpening(req, res, next) {
     ensurePicCdcRole(req);
 
     const department = String(req.user.department || "").trim().toUpperCase();
-    const { company, role, ctc } = req.body;
+    const { company, role, ctc, fileName, fileData } = req.body;
 
     if (!company || !role || ctc == null) {
       const error = new Error("company, role and ctc are required");
@@ -1236,14 +1435,23 @@ async function createCdcPlacementOpening(req, res, next) {
       throw error;
     }
 
+    const openingFile = parseOpeningFilePayload(fileName, fileData);
+
     const connection = await pool.getConnection();
     try {
       await connection.beginTransaction();
 
       const [result] = await connection.execute(
-        `INSERT INTO PLACEMENT_OPENING (company, role, ctc, is_active)
-         VALUES (?, ?, ?, 1)`,
-        [String(company).trim(), String(role).trim(), Number(ctc)]
+        `INSERT INTO PLACEMENT_OPENING (company, role, ctc, file_name, file_data, file_size, is_active)
+         VALUES (?, ?, ?, ?, ?, ?, 1)`,
+        [
+          String(company).trim(),
+          String(role).trim(),
+          Number(ctc),
+          openingFile?.fileName || null,
+          openingFile?.fileData || null,
+          openingFile?.fileSize || null
+        ]
       );
 
       await connection.execute(
@@ -1265,6 +1473,100 @@ async function createCdcPlacementOpening(req, res, next) {
     } finally {
       connection.release();
     }
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function updateCdcPlacementOpening(req, res, next) {
+  try {
+    ensurePicCdcRole(req);
+
+    const department = String(req.user.department || "").trim().toUpperCase();
+    const openingId = Number(req.params.openingId);
+
+    if (Number.isNaN(openingId)) {
+      const error = new Error("openingId must be numeric");
+      error.status = 400;
+      throw error;
+    }
+
+    const [existingRows] = await pool.execute(
+      `SELECT po.opening_id
+       FROM PLACEMENT_OPENING po
+       JOIN PLACEMENT_BRANCH pb ON pb.opening_id = po.opening_id
+       WHERE po.opening_id = ?
+         AND UPPER(pb.branch) = ?
+       LIMIT 1`,
+      [openingId, department]
+    );
+
+    if (!existingRows[0]) {
+      const error = new Error("Placement opening not found in your department");
+      error.status = 404;
+      throw error;
+    }
+
+    const updates = [];
+    const values = [];
+
+    if (req.body.company != null && String(req.body.company).trim() !== "") {
+      updates.push("company = ?");
+      values.push(String(req.body.company).trim());
+    }
+
+    if (req.body.role != null && String(req.body.role).trim() !== "") {
+      updates.push("role = ?");
+      values.push(String(req.body.role).trim());
+    }
+
+    if (req.body.ctc != null && String(req.body.ctc).trim() !== "") {
+      const ctc = Number(req.body.ctc);
+      if (Number.isNaN(ctc) || ctc < 0) {
+        const error = new Error("ctc must be a valid non-negative number");
+        error.status = 400;
+        throw error;
+      }
+      updates.push("ctc = ?");
+      values.push(ctc);
+    }
+
+    if (req.body.isActive != null) {
+      const normalizedIsActive = String(req.body.isActive).trim().toLowerCase();
+      if (!["0", "1", "true", "false"].includes(normalizedIsActive)) {
+        const error = new Error("isActive must be a boolean-like value");
+        error.status = 400;
+        throw error;
+      }
+      updates.push("is_active = ?");
+      values.push(["1", "true"].includes(normalizedIsActive) ? 1 : 0);
+    }
+
+    const openingFile = parseOpeningFilePayload(req.body.fileName, req.body.fileData);
+    if (openingFile) {
+      updates.push("file_name = ?", "file_data = ?", "file_size = ?");
+      values.push(openingFile.fileName, openingFile.fileData, openingFile.fileSize);
+    }
+
+    if (updates.length === 0) {
+      const error = new Error("At least one field is required to update");
+      error.status = 400;
+      throw error;
+    }
+
+    values.push(openingId);
+
+    await pool.execute(
+      `UPDATE PLACEMENT_OPENING
+       SET ${updates.join(", ")}
+       WHERE opening_id = ?`,
+      values
+    );
+
+    res.status(200).json({
+      message: "Placement opening updated",
+      openingId
+    });
   } catch (error) {
     next(error);
   }
@@ -2227,13 +2529,16 @@ module.exports = {
   getFacultyNotificationFeed,
   getFacultyTAApplications,
   decideFacultyTAApplication,
+  downloadFacultyTAResume,
   getFacultyLeaveApplications,
   decideFacultyLeaveApplication,
   getCdcInternshipManagement,
   createCdcInternshipOpening,
+  updateCdcInternshipOpening,
   decideCdcInternshipApplication,
   getCdcPlacementManagement,
   createCdcPlacementOpening,
+  updateCdcPlacementOpening,
   decideCdcPlacementApplication,
   getPicTtCourseTimetable,
   createPicTtCourseTimetable,

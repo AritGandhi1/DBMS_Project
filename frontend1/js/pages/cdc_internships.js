@@ -27,6 +27,10 @@ const CDCInternshipsPage = {
                   <label for="cdcInternDuration">Duration (months)</label>
                   <input id="cdcInternDuration" type="number" min="0.5" step="0.5" required />
                 </div>
+                <div class="form-group">
+                  <label for="cdcInternFile">Attachment (optional)</label>
+                  <input id="cdcInternFile" type="file" />
+                </div>
               </div>
               <button class="btn btn-primary" type="submit">Add Internship Opening</button>
             </form>
@@ -54,6 +58,45 @@ const CDCInternshipsPage = {
       msgEl.innerHTML = text ? `<div class="message ${type}">${text}</div>` : "";
     };
 
+    const readFilePayload = (file) => new Promise((resolve, reject) => {
+      if (!file) {
+        resolve(null);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const result = String(event.target?.result || "");
+        const base64 = result.includes(",") ? result.split(",")[1] : "";
+        resolve({ fileName: file.name, fileData: base64 });
+      };
+      reader.onerror = () => reject(new Error("Failed to read attachment file"));
+      reader.readAsDataURL(file);
+    });
+
+    const buildOpeningRow = (opening) => `
+      <tr>
+        <td>${opening.openingId}</td>
+        <td><input data-intern-field="company" data-intern-id="${opening.openingId}" value="${opening.company}" /></td>
+        <td><input data-intern-field="role" data-intern-id="${opening.openingId}" value="${opening.role}" /></td>
+        <td><input data-intern-field="stipend" data-intern-id="${opening.openingId}" type="number" min="0" step="0.01" value="${opening.stipend}" /></td>
+        <td><input data-intern-field="durationMonths" data-intern-id="${opening.openingId}" type="number" min="0.5" step="0.5" value="${opening.durationMonths}" /></td>
+        <td>
+          <select data-intern-field="isActive" data-intern-id="${opening.openingId}">
+            <option value="1" ${opening.isActive ? "selected" : ""}>Yes</option>
+            <option value="0" ${!opening.isActive ? "selected" : ""}>No</option>
+          </select>
+        </td>
+        <td>
+          <div style="font-size: 12px; color: #555; margin-bottom: 6px;">${opening.fileName || "No file uploaded"}</div>
+          <input type="file" data-intern-field="file" data-intern-id="${opening.openingId}" />
+        </td>
+        <td>
+          <button class="btn btn-primary" data-intern-update="${opening.openingId}">Update</button>
+        </td>
+      </tr>
+    `;
+
     const load = async () => {
       try {
         const data = await API.getCdcInternships();
@@ -64,19 +107,10 @@ const CDCInternshipsPage = {
           ? `
             <table>
               <thead>
-                <tr><th>Opening ID</th><th>Company</th><th>Role</th><th>Stipend</th><th>Duration</th><th>Active</th></tr>
+                <tr><th>Opening ID</th><th>Company</th><th>Role</th><th>Stipend</th><th>Duration</th><th>Active</th><th>Attachment</th><th>Actions</th></tr>
               </thead>
               <tbody>
-                ${openings.map((o) => `
-                  <tr>
-                    <td>${o.openingId}</td>
-                    <td>${o.company}</td>
-                    <td>${o.role}</td>
-                    <td>${o.stipend}</td>
-                    <td>${o.durationMonths}</td>
-                    <td>${o.isActive ? "Yes" : "No"}</td>
-                  </tr>
-                `).join("")}
+                ${openings.map((opening) => buildOpeningRow(opening)).join("")}
               </tbody>
             </table>
           `
@@ -110,6 +144,34 @@ const CDCInternshipsPage = {
           `
           : '<div class="message info">No applications yet.</div>';
 
+        openingsEl.querySelectorAll("button[data-intern-update]").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const openingId = Number(btn.dataset.internUpdate);
+            const companyEl = openingsEl.querySelector(`input[data-intern-field="company"][data-intern-id="${openingId}"]`);
+            const roleEl = openingsEl.querySelector(`input[data-intern-field="role"][data-intern-id="${openingId}"]`);
+            const stipendEl = openingsEl.querySelector(`input[data-intern-field="stipend"][data-intern-id="${openingId}"]`);
+            const durationEl = openingsEl.querySelector(`input[data-intern-field="durationMonths"][data-intern-id="${openingId}"]`);
+            const isActiveEl = openingsEl.querySelector(`select[data-intern-field="isActive"][data-intern-id="${openingId}"]`);
+            const fileInput = openingsEl.querySelector(`input[data-intern-field="file"][data-intern-id="${openingId}"]`);
+
+            try {
+              const filePayload = await readFilePayload(fileInput?.files?.[0]);
+              await API.updateCdcInternshipOpening(openingId, {
+                company: companyEl?.value?.trim(),
+                role: roleEl?.value?.trim(),
+                stipend: Number(stipendEl?.value),
+                durationMonths: Number(durationEl?.value),
+                isActive: isActiveEl?.value,
+                ...(filePayload || {})
+              });
+              setMessage("success", `Internship opening ${openingId} updated.`);
+              await load();
+            } catch (error) {
+              setMessage("error", error.message);
+            }
+          });
+        });
+
         applicationsEl.querySelectorAll("button[data-intern-action]").forEach((btn) => {
           btn.addEventListener("click", async () => {
             try {
@@ -131,11 +193,14 @@ const CDCInternshipsPage = {
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       try {
+        const file = document.getElementById("cdcInternFile")?.files?.[0] || null;
+        const filePayload = await readFilePayload(file);
         await API.createCdcInternshipOpening({
           company: document.getElementById("cdcInternCompany").value.trim(),
           role: document.getElementById("cdcInternRole").value.trim(),
           stipend: Number(document.getElementById("cdcInternStipend").value),
-          durationMonths: Number(document.getElementById("cdcInternDuration").value)
+          durationMonths: Number(document.getElementById("cdcInternDuration").value),
+          ...(filePayload || {})
         });
         form.reset();
         setMessage("success", "Internship opening added.");

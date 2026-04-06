@@ -3,6 +3,7 @@ const EnrollmentPage = {
   selectedMode: "course",
   currentTermNumber: 0,
   canShowTAMode: false,
+  selectedTAResumeId: "",
 
   renderModeSelector() {
     const taOption = this.canShowTAMode
@@ -161,11 +162,14 @@ const EnrollmentPage = {
     return html;
   },
 
-  renderTAEnrollment(response) {
+  renderTAEnrollment(response, resumes = []) {
     const canApply = Boolean(response.canApply);
     const faculties = response.faculties || [];
     const appliedFacultyIds = response.appliedFacultyIds || [];
     const applications = response.applications || [];
+    const hasResumes = resumes.length > 0;
+    const selectedResumeId = this.selectedTAResumeId || (hasResumes ? String(resumes[0].resumeId) : "");
+    this.selectedTAResumeId = selectedResumeId;
 
     let html = "";
 
@@ -186,7 +190,9 @@ const EnrollmentPage = {
               <tr>
                 <th>Faculty ID</th>
                 <th>Faculty Name</th>
+                <th>Resume</th>
                 <th>Role</th>
+                <th>Status</th>
                 <th>Term</th>
               </tr>
             </thead>
@@ -198,7 +204,9 @@ const EnrollmentPage = {
           <tr>
             <td>${item.facultyId}</td>
             <td>${item.facultyName}</td>
+            <td>${item.resumeFileName || "-"}</td>
             <td>${item.role}</td>
+            <td>${item.status || "-"}</td>
             <td>${item.termNumber}</td>
           </tr>
         `;
@@ -211,9 +219,20 @@ const EnrollmentPage = {
       `;
     }
 
+    const resumeOptions = resumes
+      .map((resume) => `<option value="${resume.resumeId}" ${String(resume.resumeId) === selectedResumeId ? "selected" : ""}>${resume.fileName}</option>`)
+      .join("");
+
     html += `
       <div class="card">
         <div class="card-title">Department Faculty List</div>
+        <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom: 12px;">
+          <label for="taResumeSelect" style="font-weight:600; color:#333;">Resume for TA application:</label>
+          <select id="taResumeSelect" ${hasResumes ? "" : "disabled"} style="padding:8px 12px; border:1px solid #ddd; border-radius:6px; min-width:240px;">
+            ${resumeOptions}
+          </select>
+        </div>
+        ${hasResumes ? "" : '<div class="message info" style="margin-bottom: 12px;">Upload a resume first in Student Resume before applying for TA.</div>'}
     `;
 
     if (faculties.length === 0) {
@@ -240,7 +259,7 @@ const EnrollmentPage = {
             <td>${faculty.facultyName}</td>
             <td>${faculty.department}</td>
             <td>
-              <button class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;" ${hasApplied ? "disabled" : ""}
+              <button class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;" ${(hasApplied || !hasResumes) ? "disabled" : ""}
                 onclick="EnrollmentPage.applyTA('${faculty.facultyId}', '${faculty.facultyName}')">
                 ${hasApplied ? "Applied" : "Apply"}
               </button>
@@ -277,8 +296,11 @@ const EnrollmentPage = {
       html += this.renderModeSelector();
 
       if (this.selectedMode === "ta") {
-        const taResponse = await API.getTAEnrollmentOptions();
-        html += this.renderTAEnrollment(taResponse);
+        const [taResponse, resumeResponse] = await Promise.all([
+          API.getTAEnrollmentOptions(),
+          API.getStudentResumes()
+        ]);
+        html += this.renderTAEnrollment(taResponse, resumeResponse.resumes || []);
       } else {
         const options = courseResponse.enrollmentOptions || [];
         const unavailableCourses = courseResponse.unavailableCourses || [];
@@ -323,13 +345,25 @@ const EnrollmentPage = {
   },
 
   async applyTA(facultyId, facultyName) {
+    const resumeSelect = document.getElementById("taResumeSelect");
+    const resumeId = resumeSelect ? resumeSelect.value : "";
+    this.selectedTAResumeId = resumeId;
+
+    if (!resumeId) {
+      const messageWrap = document.getElementById("taEnrollMessage");
+      if (messageWrap) {
+        messageWrap.innerHTML = '<div class="message error">Please select a resume before applying.</div>';
+      }
+      return;
+    }
+
     const messageWrap = document.getElementById("taEnrollMessage");
     if (messageWrap) {
       messageWrap.innerHTML = '<div class="loading"><div class="spinner"></div>Submitting TA application...</div>';
     }
 
     try {
-      await API.applyTAEnrollment(facultyId);
+      await API.applyTAEnrollment(facultyId, Number(resumeId));
       if (messageWrap) {
         messageWrap.innerHTML = `<div class="message success">Applied for TA with ${facultyName}. Refreshing...</div>`;
       }

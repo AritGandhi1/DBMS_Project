@@ -21,7 +21,11 @@ const {
 	submitFeedback,
 	getStudentNotifications,
 	submitLeaveApplication,
-	getPastLeaveApplications
+	getPastLeaveApplications,
+	uploadResume,
+	getStudentResumes,
+	deleteResume,
+	downloadResume
 } = require("../controllers/studentController");
 
 const router = express.Router();
@@ -46,5 +50,11 @@ router.get("/feedback/courses", authenticate, getCoursesForFeedback);
 router.post("/feedback/submit", authenticate, submitFeedback);
 router.post("/leave-application/apply", authenticate, submitLeaveApplication);
 router.get("/leave-application/past", authenticate, getPastLeaveApplications);
+
+// Resume management routes
+router.post("/resume/upload", authenticate, uploadResume);
+router.get("/resume/list", authenticate, getStudentResumes);
+router.post("/resume/delete", authenticate, deleteResume);
+router.get("/resume/download/:resumeId", authenticate, downloadResume);
 
 module.exports = router;

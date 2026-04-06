@@ -507,11 +507,29 @@ async function applyInternship(req, res, next) {
     }
 
     const studentId = req.user.id;
-    const { openingId } = req.body;
+    const { openingId, resumeId } = req.body;
 
     if (!openingId) {
       const error = new Error("openingId is required");
       error.status = 400;
+      throw error;
+    }
+
+    if (!resumeId) {
+      const error = new Error("resumeId is required");
+      error.status = 400;
+      throw error;
+    }
+
+    // Verify resume belongs to student and is not deleted
+    const [resumeRows] = await pool.execute(
+      `SELECT resume_id FROM STUDENT_RESUME WHERE resume_id = ? AND student_id = ? AND is_deleted = 0`,
+      [resumeId, studentId]
+    );
+
+    if (!resumeRows[0]) {
+      const error = new Error("Resume not found or has been deleted");
+      error.status = 404;
       throw error;
     }
 
@@ -562,9 +580,9 @@ async function applyInternship(req, res, next) {
     const opening = openingRows[0];
 
     await pool.execute(
-      `INSERT INTO INTERNSHIP (student_id, opening_id, company, role, package, duration, status)
-       VALUES (?, ?, ?, ?, ?, ?, 'Applied')`,
-      [studentId, opening.opening_id, opening.company, opening.role, opening.stipend, opening.duration_months]
+      `INSERT INTO INTERNSHIP (student_id, opening_id, resume_id, company, role, package, duration, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'Applied')`,
+      [studentId, opening.opening_id, resumeId, opening.company, opening.role, opening.stipend, opening.duration_months]
     );
 
     res.status(201).json({
@@ -681,11 +699,29 @@ async function applyPlacement(req, res, next) {
     }
 
     const studentId = req.user.id;
-    const { openingId } = req.body;
+    const { openingId, resumeId } = req.body;
 
     if (!openingId) {
       const error = new Error("openingId is required");
       error.status = 400;
+      throw error;
+    }
+
+    if (!resumeId) {
+      const error = new Error("resumeId is required");
+      error.status = 400;
+      throw error;
+    }
+
+    // Verify resume belongs to student and is not deleted
+    const [resumeRows] = await pool.execute(
+      `SELECT resume_id FROM STUDENT_RESUME WHERE resume_id = ? AND student_id = ? AND is_deleted = 0`,
+      [resumeId, studentId]
+    );
+
+    if (!resumeRows[0]) {
+      const error = new Error("Resume not found or has been deleted");
+      error.status = 404;
       throw error;
     }
 
@@ -742,9 +778,9 @@ async function applyPlacement(req, res, next) {
     const opening = openingRows[0];
 
     await pool.execute(
-      `INSERT INTO PLACEMENT (student_id, opening_id, company, role, package, status)
-       VALUES (?, ?, ?, ?, ?, 'Applied')`,
-      [studentId, opening.opening_id, opening.company, opening.role, opening.ctc]
+      `INSERT INTO PLACEMENT (student_id, opening_id, resume_id, company, role, package, status)
+       VALUES (?, ?, ?, ?, ?, ?, 'Applied')`,
+      [studentId, opening.opening_id, resumeId, opening.company, opening.role, opening.ctc]
     );
 
     res.status(201).json({
@@ -1137,9 +1173,11 @@ async function getTAEnrollmentOptions(req, res, next) {
     );
 
     const [applicationRows] = await pool.execute(
-      `SELECT ta.ta_id, ta.faculty_id, ta.role, ta.term_number, f.name AS faculty_name
+      `SELECT ta.ta_id, ta.faculty_id, ta.role, ta.term_number, ta.status, f.name AS faculty_name,
+              ta.resume_id, sr.file_name AS resume_file_name
        FROM TA_ASSIGNMENT ta
        JOIN FACULTY f ON f.faculty_id = ta.faculty_id
+       LEFT JOIN STUDENT_RESUME sr ON sr.resume_id = ta.resume_id
        WHERE ta.student_id = ?
          AND ta.term_number = ?
          AND ta.offering_id IS NULL
@@ -1157,7 +1195,10 @@ async function getTAEnrollmentOptions(req, res, next) {
       taId: row.ta_id,
       facultyId: row.faculty_id,
       facultyName: row.faculty_name,
+      resumeId: row.resume_id,
+      resumeFileName: row.resume_file_name,
       role: row.role,
+      status: row.status,
       termNumber: row.term_number
     }));
 
@@ -1183,10 +1224,16 @@ async function applyTAEnrollment(req, res, next) {
     }
 
     const studentId = req.user.id;
-    const { facultyId } = req.body;
+    const { facultyId, resumeId } = req.body;
 
     if (!facultyId) {
       const error = new Error("facultyId is required");
+      error.status = 400;
+      throw error;
+    }
+
+    if (!resumeId) {
+      const error = new Error("resumeId is required");
       error.status = 400;
       throw error;
     }
@@ -1238,6 +1285,22 @@ async function applyTAEnrollment(req, res, next) {
       throw error;
     }
 
+    const [resumeRows] = await pool.execute(
+      `SELECT resume_id
+       FROM STUDENT_RESUME
+       WHERE resume_id = ?
+         AND student_id = ?
+         AND is_deleted = 0
+       LIMIT 1`,
+      [resumeId, studentId]
+    );
+
+    if (!resumeRows[0]) {
+      const error = new Error("Resume not found or has been deleted");
+      error.status = 404;
+      throw error;
+    }
+
     const [existingRows] = await pool.execute(
       `SELECT ta_id
        FROM TA_ASSIGNMENT
@@ -1256,9 +1319,9 @@ async function applyTAEnrollment(req, res, next) {
     }
 
     const [insertResult] = await pool.execute(
-      `INSERT INTO TA_ASSIGNMENT (student_id, faculty_id, term_number, offering_id, role, status)
-       VALUES (?, ?, ?, NULL, 'Department TA', 'Pending')`,
-      [studentId, facultyId, currentTermNumber]
+      `INSERT INTO TA_ASSIGNMENT (student_id, faculty_id, term_number, offering_id, resume_id, role, status)
+       VALUES (?, ?, ?, NULL, ?, 'Department TA', 'Pending')`,
+      [studentId, facultyId, currentTermNumber, resumeId]
     );
 
     res.status(201).json({
@@ -1266,6 +1329,7 @@ async function applyTAEnrollment(req, res, next) {
       taId: insertResult.insertId,
       facultyId,
       facultyName: faculty.name,
+      resumeId,
       termNumber: currentTermNumber,
       role: "Department TA",
       status: "Pending"
@@ -1547,6 +1611,191 @@ async function getPastLeaveApplications(req, res, next) {
   }
 }
 
+// =========================================
+// RESUME MANAGEMENT
+// =========================================
+
+async function uploadResume(req, res, next) {
+  try {
+    if (req.user.role !== "STUDENT") {
+      const error = new Error("Only students can upload resumes");
+      error.status = 403;
+      throw error;
+    }
+
+    const studentId = req.user.id;
+    const { fileName, fileData } = req.body;
+
+    if (!fileName || !fileData) {
+      const error = new Error("fileName and fileData are required");
+      error.status = 400;
+      throw error;
+    }
+
+    // Validate file size (max 5MB)
+    const fileSize = Buffer.byteLength(fileData, 'base64');
+    if (fileSize > 5 * 1024 * 1024) {
+      const error = new Error("File size exceeds 5MB limit");
+      error.status = 400;
+      throw error;
+    }
+
+    const buffer = Buffer.from(fileData, 'base64');
+
+    const [result] = await pool.execute(
+      `INSERT INTO STUDENT_RESUME (student_id, file_name, file_data, file_size)
+       VALUES (?, ?, ?, ?)`,
+      [studentId, fileName, buffer, fileSize]
+    );
+
+    res.status(201).json({
+      message: "Resume uploaded successfully",
+      resumeId: result.insertId,
+      fileName: fileName,
+      uploadedAt: new Date().toISOString()
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function getStudentResumes(req, res, next) {
+  try {
+    if (req.user.role !== "STUDENT") {
+      const error = new Error("Only students can view their resumes");
+      error.status = 403;
+      throw error;
+    }
+
+    const studentId = req.user.id;
+
+    const [rows] = await pool.execute(
+      `SELECT 
+        resume_id AS resumeId,
+        file_name AS fileName,
+        file_size AS fileSize,
+        uploaded_at AS uploadedAt
+       FROM STUDENT_RESUME
+       WHERE student_id = ? AND is_deleted = 0
+       ORDER BY uploaded_at DESC`,
+      [studentId]
+    );
+
+    const resumes = rows.map((row) => ({
+      resumeId: row.resumeId,
+      fileName: row.fileName,
+      fileSize: row.fileSize,
+      uploadedAt: row.uploadedAt
+    }));
+
+    res.status(200).json({
+      message: "Resumes retrieved successfully",
+      resumes
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function deleteResume(req, res, next) {
+  try {
+    if (req.user.role !== "STUDENT") {
+      const error = new Error("Only students can delete their resumes");
+      error.status = 403;
+      throw error;
+    }
+
+    const studentId = req.user.id;
+    const { resumeId } = req.body;
+
+    if (!resumeId) {
+      const error = new Error("resumeId is required");
+      error.status = 400;
+      throw error;
+    }
+
+    // Verify resume belongs to student
+    const [rows] = await pool.execute(
+      `SELECT resume_id FROM STUDENT_RESUME WHERE resume_id = ? AND student_id = ?`,
+      [resumeId, studentId]
+    );
+
+    if (!rows[0]) {
+      const error = new Error("Resume not found or does not belong to you");
+      error.status = 404;
+      throw error;
+    }
+
+    // Check if resume is currently being used in an active application
+    const [activeApps] = await pool.execute(
+      `SELECT COUNT(*) as count FROM INTERNSHIP 
+       WHERE resume_id = ? AND status IN ('Applied', 'Accepted')
+       UNION ALL
+       SELECT COUNT(*) as count FROM PLACEMENT 
+       WHERE resume_id = ? AND status IN ('Applied', 'Accepted')
+       UNION ALL
+       SELECT COUNT(*) as count FROM TA_ASSIGNMENT
+       WHERE resume_id = ? AND status IN ('Pending', 'Accepted')`,
+      [resumeId, resumeId, resumeId]
+    );
+
+    if (activeApps.some((row) => Number(row.count) > 0)) {
+      const error = new Error("Cannot delete resume that is currently used in an active application");
+      error.status = 409;
+      throw error;
+    }
+
+    // Soft delete the resume
+    await pool.execute(
+      `UPDATE STUDENT_RESUME SET is_deleted = 1 WHERE resume_id = ?`,
+      [resumeId]
+    );
+
+    res.status(200).json({
+      message: "Resume deleted successfully"
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function downloadResume(req, res, next) {
+  try {
+    if (req.user.role !== "STUDENT") {
+      const error = new Error("Only students can download their resumes");
+      error.status = 403;
+      throw error;
+    }
+
+    const studentId = req.user.id;
+    const { resumeId } = req.params;
+
+    if (!resumeId) {
+      const error = new Error("resumeId is required");
+      error.status = 400;
+      throw error;
+    }
+
+    const [rows] = await pool.execute(
+      `SELECT file_name, file_data FROM STUDENT_RESUME WHERE resume_id = ? AND student_id = ?`,
+      [resumeId, studentId]
+    );
+
+    if (!rows[0]) {
+      const error = new Error("Resume not found");
+      error.status = 404;
+      throw error;
+    }
+
+    const resume = rows[0];
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${resume.file_name}"`);
+    res.send(resume.file_data);
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   getStudentDetails,
   getStudentCourses,
@@ -1567,5 +1816,9 @@ module.exports = {
   submitFeedback,
   getStudentNotifications,
   submitLeaveApplication,
-  getPastLeaveApplications
+  getPastLeaveApplications,
+  uploadResume,
+  getStudentResumes,
+  deleteResume,
+  downloadResume
 };

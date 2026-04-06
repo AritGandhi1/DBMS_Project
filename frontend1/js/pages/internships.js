@@ -125,6 +125,9 @@ const InternshipsPage = {
           <div class="card">
             <div class="card-title">Internships ${currentTermNumber ? `(Semester ${currentTermNumber})` : ""}</div>
             ${eligibilityMessage}
+            <div style="margin-top: 10px; padding: 10px; background-color: #f0f0f0; border-radius: 4px; font-size: 14px;">
+              <strong>Note:</strong> Make sure you have uploaded a resume before applying. <a href="#/student-resume" style="color: #0066cc; text-decoration: underline;">Manage Resumes</a>
+            </div>
           </div>
           ${this.renderStatusTable("Accepted", groupedInternships.accepted)}
           ${this.renderStatusTable("Applied", groupedInternships.applied)}
@@ -147,13 +150,73 @@ const InternshipsPage = {
 
   async apply(openingId, company, role) {
     const messageWrap = document.getElementById("internshipApplyMessage");
+    
+    try {
+      // Fetch resumes
+      const resumeResponse = await API.getStudentResumes();
+      const resumes = resumeResponse.resumes || [];
+
+      if (resumes.length === 0) {
+        if (messageWrap) {
+          messageWrap.innerHTML = '<div class="message error">No resumes found. Please upload a resume before applying.</div>';
+        }
+        return;
+      }
+
+      // Create resume selection modal
+      this.showResumeSelectionModal(openingId, company, role, resumes, messageWrap);
+    } catch (error) {
+      if (messageWrap) {
+        messageWrap.innerHTML = `<div class="message error">${error.message}</div>`;
+      }
+    }
+  },
+
+  showResumeSelectionModal(openingId, company, role, resumes, messageWrap) {
+    const modalHTML = `
+      <div id="resumeSelectionModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+        <div style="background-color: white; padding: 20px; border-radius: 8px; max-width: 400px; width: 90%;">
+          <h3 style="margin-top: 0;">Select Resume</h3>
+          <p>Choose which resume to submit for ${company} - ${role}:</p>
+          <div id="resumeOptions" style="margin: 15px 0;">
+            ${resumes.map(r => `
+              <label style="display: block; margin-bottom: 10px;"><input type="radio" name="selectedResume" value="${r.resumeId}" /> ${r.fileName}</label>
+            `).join('')}
+          </div>
+          <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <button class="btn btn-secondary" onclick="document.getElementById('resumeSelectionModal').remove();" style="margin: 0; padding: 8px 16px; font-size: 14px;">Cancel</button>
+            <button class="btn btn-primary" onclick="InternshipsPage.submitApplication(${openingId}, '${company}', '${role}')" style="margin: 0; padding: 8px 16px; font-size: 14px;">Apply</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+  },
+
+  async submitApplication(openingId, company, role) {
+    const selectedResume = document.querySelector('input[name="selectedResume"]:checked');
+    
+    if (!selectedResume) {
+      alert('Please select a resume');
+      return;
+    }
+
+    const resumeId = selectedResume.value;
+    const messageWrap = document.getElementById("internshipApplyMessage");
+
+    // Close modal
+    const modal = document.getElementById('resumeSelectionModal');
+    if (modal) {
+      modal.remove();
+    }
 
     if (messageWrap) {
       messageWrap.innerHTML = '<div class="loading"><div class="spinner"></div>Submitting internship application...</div>';
     }
 
     try {
-      await API.applyInternship(openingId);
+      await API.applyInternship(openingId, resumeId);
       if (messageWrap) {
         messageWrap.innerHTML = `<div class="message success">Applied to ${company} for ${role}. Refreshing...</div>`;
       }

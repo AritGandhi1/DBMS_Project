@@ -22,7 +22,8 @@ const pages = [
   CDCPlacementsPage,
   TTCoursePage,
   TTExamPage,
-  HODCoursesPage
+  HODCoursesPage,
+  StudentResumePage
 ];
 
 const Router = {
@@ -147,7 +148,8 @@ const Router = {
           'feedback',
           'internships',
           'placements',
-          'leave'
+          'leave',
+          'student-resume'
         ],
         FACULTY: facultyRoutes
       };
@@ -229,7 +231,7 @@ const Router = {
     const isHod = isFaculty && String(user?.facultyDesignation || '').toUpperCase() === 'HOD';
     const activeClass = (routeName) => activeRoute === routeName ? 'active' : '';
     const academicsActive = ['courses', 'timetable', 'transcript', 'result', 'attendance', 'exam', 'feedback'].includes(activeRoute);
-    const cdcActive = ['internships', 'placements'].includes(activeRoute);
+    const cdcActive = ['internships', 'placements', 'student-resume'].includes(activeRoute);
     const facultyAcademicsActive = ['marks-update', 'attendance-update', 'ta-enrollment'].includes(activeRoute);
     const facultyTimetableActive = ['tt-course', 'tt-exam'].includes(activeRoute);
 
@@ -252,6 +254,7 @@ const Router = {
               <div class="nav-dropdown-menu">
                 <a href="#/internships" class="nav-link ${activeClass('internships')}">Internships</a>
                 <a href="#/placements" class="nav-link ${activeClass('placements')}">Placements</a>
+                <a href="#/student-resume" class="nav-link ${activeClass('student-resume')}">My Resumes</a>
               </div>
             </div>
             <a href="#/leave" class="nav-link ${activeClass('leave')}">Leave</a>
@@ -276,6 +279,7 @@ const Router = {
                 <div class="mobile-submenu">
                   <button class="mobile-menu-item ${activeClass('internships')}" onclick="Router.goToRoute('internships')">Internships</button>
                   <button class="mobile-menu-item ${activeClass('placements')}" onclick="Router.goToRoute('placements')">Placements</button>
+                  <button class="mobile-menu-item ${activeClass('student-resume')}" onclick="Router.goToRoute('student-resume')">My Resumes</button>
                 </div>
               </details>
               <button class="mobile-menu-item ${activeClass('leave')}" onclick="Router.goToRoute('leave')">Leave</button>

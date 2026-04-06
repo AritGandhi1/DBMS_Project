@@ -7,12 +7,13 @@ USE student_db;
 SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS ACADEMIC_TRANSCRIPT;
 DROP TABLE IF EXISTS RESULT_HISTORY;
+DROP TABLE IF EXISTS PLACEMENT;
+DROP TABLE IF EXISTS INTERNSHIP;
 DROP TABLE IF EXISTS PLACEMENT_OPENING;
 DROP TABLE IF EXISTS INTERNSHIP_OPENING;
 DROP TABLE IF EXISTS PLACEMENT_BRANCH;
 DROP TABLE IF EXISTS INTERNSHIP_BRANCH;
-DROP TABLE IF EXISTS PLACEMENT;
-DROP TABLE IF EXISTS INTERNSHIP;
+DROP TABLE IF EXISTS STUDENT_RESUME;
 DROP TABLE IF EXISTS PREREQUISITE;
 DROP TABLE IF EXISTS TIMETABLE;
 DROP TABLE IF EXISTS ROOM;
@@ -87,6 +88,24 @@ CREATE TABLE DOCUMENT (
 
     FOREIGN KEY (student_id) REFERENCES STUDENT(student_id)
         ON DELETE CASCADE
+);
+
+-- =========================================
+-- STUDENT RESUME
+-- =========================================
+CREATE TABLE STUDENT_RESUME (
+    resume_id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id VARCHAR(10) NOT NULL,
+    file_name VARCHAR(100) NOT NULL,
+    file_data LONGBLOB NOT NULL,
+    file_size INT,
+    uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    is_deleted TINYINT(1) DEFAULT 0,
+
+    FOREIGN KEY (student_id) REFERENCES STUDENT(student_id)
+        ON DELETE CASCADE,
+    
+    INDEX idx_student_resumse (student_id, is_deleted)
 );
 
 -- =========================================
@@ -240,8 +259,9 @@ CREATE TABLE TA_ASSIGNMENT (
     faculty_id VARCHAR(10),
     term_number INT,
     offering_id INT NULL,
+    resume_id INT NULL,
+    role ENUM('Department TA','Course TA','Lab TA') DEFAULT 'Department TA',
 
-    role VARCHAR(50),
     status ENUM('Pending','Accepted','Rejected') DEFAULT 'Pending',
     applied_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 
@@ -250,6 +270,8 @@ CREATE TABLE TA_ASSIGNMENT (
     FOREIGN KEY (faculty_id) REFERENCES FACULTY(faculty_id)
         ON DELETE CASCADE,
     FOREIGN KEY (offering_id) REFERENCES COURSE_OFFERING(offering_id)
+        ON DELETE SET NULL,
+    FOREIGN KEY (resume_id) REFERENCES STUDENT_RESUME(resume_id)
         ON DELETE SET NULL,
 
     UNIQUE(student_id, faculty_id, term_number, offering_id)
@@ -348,6 +370,9 @@ CREATE TABLE INTERNSHIP_OPENING (
     role VARCHAR(100) NOT NULL,
     stipend DECIMAL(10,2) NOT NULL,
     duration_months DECIMAL(4,1) NOT NULL,
+    file_name VARCHAR(255),
+    file_data LONGBLOB,
+    file_size INT,
     is_active TINYINT(1) NOT NULL DEFAULT 1
 );
 
@@ -366,6 +391,9 @@ CREATE TABLE PLACEMENT_OPENING (
     company VARCHAR(100) NOT NULL,
     role VARCHAR(100) NOT NULL,
     ctc DECIMAL(12,2) NOT NULL,
+    file_name VARCHAR(255),
+    file_data LONGBLOB,
+    file_size INT,
     is_active TINYINT(1) NOT NULL DEFAULT 1
 );
 
@@ -384,6 +412,7 @@ CREATE TABLE INTERNSHIP (
     internship_id INT AUTO_INCREMENT PRIMARY KEY,
     student_id VARCHAR(10),
     opening_id INT NULL,
+    resume_id INT NULL,
 
     company VARCHAR(100),
     role VARCHAR(100),
@@ -395,6 +424,8 @@ CREATE TABLE INTERNSHIP (
     FOREIGN KEY (student_id) REFERENCES STUDENT(student_id)
         ON DELETE CASCADE,
     FOREIGN KEY (opening_id) REFERENCES INTERNSHIP_OPENING(opening_id)
+        ON DELETE SET NULL,
+    FOREIGN KEY (resume_id) REFERENCES STUDENT_RESUME(resume_id)
         ON DELETE SET NULL
 );
 
@@ -405,6 +436,7 @@ CREATE TABLE PLACEMENT (
     placement_id INT AUTO_INCREMENT PRIMARY KEY,
     student_id VARCHAR(10),
     opening_id INT NULL,
+    resume_id INT NULL,
 
     company VARCHAR(100),
     role VARCHAR(100),
@@ -416,6 +448,8 @@ CREATE TABLE PLACEMENT (
     FOREIGN KEY (student_id) REFERENCES STUDENT(student_id)
         ON DELETE CASCADE,
     FOREIGN KEY (opening_id) REFERENCES PLACEMENT_OPENING(opening_id)
+        ON DELETE SET NULL,
+    FOREIGN KEY (resume_id) REFERENCES STUDENT_RESUME(resume_id)
         ON DELETE SET NULL
 );
 
