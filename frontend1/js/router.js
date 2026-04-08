@@ -2,6 +2,8 @@ const pages = [
   LoginPage,
   RegisterPage,
   DashboardPage,
+  AdminUserManagementPage,
+  AdminRoomsPage,
   CoursesPage,
   TimetablePage,
   InternshipsPage,
@@ -151,7 +153,8 @@ const Router = {
           'leave',
           'student-resume'
         ],
-        FACULTY: facultyRoutes
+        FACULTY: facultyRoutes,
+        ADMIN: ['dashboard', 'admin-users', 'admin-rooms', 'send-notification']
       };
 
       // Check authentication and redirect if needed
@@ -165,8 +168,9 @@ const Router = {
         }
       } else {
         if (route === 'login' || route === 'register' || route === '') {
-          if (window.location.hash !== '#/dashboard') {
-            window.location.hash = '#/dashboard';
+          const defaultRoute = '#/dashboard';
+          if (window.location.hash !== defaultRoute) {
+            window.location.hash = defaultRoute;
           }
           this.isNavigating = false;
           return;
@@ -176,8 +180,9 @@ const Router = {
       if (Auth.isAuthenticated() && route && route !== 'login' && route !== 'register') {
         const roleRoutes = allowedRoutes[role] || ['dashboard'];
         if (!roleRoutes.includes(route)) {
-          if (window.location.hash !== '#/dashboard') {
-            window.location.hash = '#/dashboard';
+          const defaultRoute = '#/dashboard';
+          if (window.location.hash !== defaultRoute) {
+            window.location.hash = defaultRoute;
           }
           this.isNavigating = false;
           return;
@@ -225,6 +230,7 @@ const Router = {
   renderHeader(activeRoute) {
     const user = Auth.getUser();
     const isFaculty = user?.role === 'FACULTY';
+    const isAdmin = user?.role === 'ADMIN';
     const isFacultyAdvisor = isFaculty ? Boolean(user?.isFacultyAdvisor) : false;
     const isPicCdc = isFaculty && String(user?.facultyDesignation || '').toUpperCase() === 'PIC_CDC';
     const isPicTt = isFaculty && String(user?.facultyDesignation || '').toUpperCase() === 'PIC_TT';
@@ -363,7 +369,19 @@ const Router = {
               <button class="mobile-menu-item ${activeClass('send-notification')}" onclick="Router.goToRoute('send-notification')">Send Notification</button>
     `;
 
-    const notifications = isFaculty
+                    const adminNav = `
+                      <a href="#/send-notification" class="nav-link ${activeClass('send-notification')}">Send Notification</a>
+                      <a href="#/admin-users" class="nav-link ${activeClass('admin-users')}">User Management</a>
+                      <a href="#/admin-rooms" class="nav-link ${activeClass('admin-rooms')}">Room Management</a>
+                    `;
+
+                    const adminMobileNav = `
+                        <button class="mobile-menu-item ${activeClass('send-notification')}" onclick="Router.goToRoute('send-notification')">Send Notification</button>
+                        <button class="mobile-menu-item ${activeClass('admin-users')}" onclick="Router.goToRoute('admin-users')">User Management</button>
+                        <button class="mobile-menu-item ${activeClass('admin-rooms')}" onclick="Router.goToRoute('admin-rooms')">Room Management</button>
+                    `;
+
+    const notifications = (isFaculty || isAdmin)
       ? ''
       : `
             <div class="notification-wrap" id="notificationWrap">
@@ -386,7 +404,7 @@ const Router = {
           <div class="logo">DBMS Portal</div>
           <div class="nav">
             <a href="#/dashboard" class="nav-link ${activeClass('dashboard')}">Dashboard</a>
-            ${isFaculty ? facultyNav : studentNav}
+            ${isFaculty ? facultyNav : isAdmin ? adminNav : studentNav}
           </div>
           <div class="mobile-nav-wrap">
             <button class="mobile-menu-btn" onclick="Router.toggleMobileMenu()" aria-label="Open navigation menu">
@@ -396,7 +414,7 @@ const Router = {
             </button>
             <div id="mobileMenuDropdown" class="mobile-menu-dropdown ${this.mobileMenuOpen ? 'open' : ''}">
               <button class="mobile-menu-item ${activeClass('dashboard')}" onclick="Router.goToRoute('dashboard')">Dashboard</button>
-              ${isFaculty ? facultyMobileNav : studentMobileNav}
+              ${isFaculty ? facultyMobileNav : isAdmin ? adminMobileNav : studentMobileNav}
             </div>
           </div>
           <div class="user-info">

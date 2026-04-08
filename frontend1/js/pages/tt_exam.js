@@ -1,6 +1,18 @@
 const TTExamPage = {
   id: "tt-exam",
 
+  renderOfferingOptions(offerings, selectedOfferingId) {
+    const selected = String(selectedOfferingId || "");
+    const options = (offerings || []).map((offering) => {
+      const offeringId = String(offering.offeringId || "");
+      const courseId = String(offering.courseId || "");
+      const selectedAttr = offeringId === selected ? "selected" : "";
+      return `<option value="${offeringId}" ${selectedAttr}>${offeringId} (${courseId})</option>`;
+    }).join("");
+
+    return `<option value="" disabled ${selected ? "" : "selected"}>${options ? "Select Offering" : "No Offerings Available"}</option>${options}`;
+  },
+
   async render() {
     return `
       <div class="container">
@@ -13,7 +25,7 @@ const TTExamPage = {
               <div class="card-grid">
                 <div class="form-group">
                   <label for="ttExamOfferingId">Offering ID</label>
-                  <input id="ttExamOfferingId" type="number" min="1" required />
+                  <select id="ttExamOfferingId" required></select>
                 </div>
                 <div class="form-group">
                   <label for="ttExamType">Exam Type</label>
@@ -52,6 +64,7 @@ const TTExamPage = {
     const msgEl = document.getElementById("ttExamMessage");
     const tableEl = document.getElementById("ttExamTable");
     const form = document.getElementById("ttExamCreateForm");
+    const offeringSelectEl = document.getElementById("ttExamOfferingId");
 
     const setMessage = (type, text) => {
       msgEl.innerHTML = text ? `<div class="message ${type}">${text}</div>` : "";
@@ -59,8 +72,14 @@ const TTExamPage = {
 
     const load = async () => {
       try {
-        const data = await API.getPicTtExamTimetable();
-        const schedules = data.schedules || [];
+        const [examData, offeringData] = await Promise.all([
+          API.getPicTtExamTimetable(),
+          API.getPicTtOfferings()
+        ]);
+        const schedules = examData.schedules || [];
+        const offerings = offeringData.offerings || [];
+
+        offeringSelectEl.innerHTML = this.renderOfferingOptions(offerings, "");
 
         tableEl.innerHTML = schedules.length
           ? `
@@ -74,7 +93,7 @@ const TTExamPage = {
                 ${schedules.map((s) => `
                   <tr>
                     <td>${s.examId}</td>
-                    <td>${s.offeringId}</td>
+                    <td>${s.offeringId} (${s.courseId})</td>
                     <td>${s.courseId} - ${s.courseName}</td>
                     <td>${s.termNumber}</td>
                     <td>

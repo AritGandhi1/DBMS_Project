@@ -25,6 +25,8 @@ const {
 	updateCdcPlacementOpening,
 	decideCdcPlacementApplication,
 	getPicTtCourseTimetable,
+	getPicTtRooms,
+	getPicTtOfferings,
 	createPicTtCourseTimetable,
 	updatePicTtCourseTimetable,
 	getPicTtExamTimetable,
@@ -67,6 +69,8 @@ router.post("/cdc/placements/openings", authenticate, createCdcPlacementOpening)
 router.put("/cdc/placements/openings/:openingId", authenticate, updateCdcPlacementOpening);
 router.post("/cdc/placements/applications/:placementId/decision", authenticate, decideCdcPlacementApplication);
 router.get("/tt/courses", authenticate, getPicTtCourseTimetable);
+router.get("/tt/rooms", authenticate, getPicTtRooms);
+router.get("/tt/offerings", authenticate, getPicTtOfferings);
 router.post("/tt/courses", authenticate, createPicTtCourseTimetable);
 router.put("/tt/courses/:timetableId", authenticate, updatePicTtCourseTimetable);
 router.get("/tt/exams", authenticate, getPicTtExamTimetable);

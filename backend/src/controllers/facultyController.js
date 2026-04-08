@@ -36,6 +36,14 @@ function ensureFacultyRole(req) {
   }
 }
 
+function ensureFacultyOrAdminRole(req) {
+  if (req.user.role !== "FACULTY" && req.user.role !== "ADMIN") {
+    const error = new Error("Only faculty or admin can access this endpoint");
+    error.status = 403;
+    throw error;
+  }
+}
+
 function ensurePicCdcRole(req) {
   ensureFacultyRole(req);
   if (String(req.user.facultyDesignation || "").toUpperCase() !== "PIC_CDC") {
@@ -613,9 +621,10 @@ async function updateAttendanceForStudent(req, res, next) {
 
 async function sendFacultyNotification(req, res, next) {
   try {
-    ensureFacultyRole(req);
+    ensureFacultyOrAdminRole(req);
 
-    const facultyId = String(req.user.id || "").trim();
+    const senderId = String(req.user.id || "").trim();
+    const isAdmin = req.user.role === "ADMIN";
     const { targetType, targetId, message } = req.body;
 
     const normalizedTargetType = String(targetType || "").trim().toUpperCase();
@@ -643,47 +652,85 @@ async function sendFacultyNotification(req, res, next) {
     let notificationTargetId = normalizedTargetId;
 
     if (normalizedTargetType === "COURSE") {
-      const [courseRows] = await pool.execute(
-        `SELECT co.offering_id
-         FROM COURSE_OFFERING co
-         WHERE co.faculty_id = ?
-           AND co.course_id = ?
-         LIMIT 1`,
-        [facultyId, normalizedTargetId]
-      );
+      if (isAdmin) {
+        const [courseRows] = await pool.execute(
+          `SELECT offering_id
+           FROM COURSE_OFFERING
+           WHERE course_id = ?
+           LIMIT 1`,
+          [normalizedTargetId]
+        );
 
-      if (!courseRows[0]) {
-        const error = new Error("Course not found under your offerings");
-        error.status = 403;
-        throw error;
+        if (!courseRows[0]) {
+          const error = new Error("Course not found");
+          error.status = 404;
+          throw error;
+        }
+      } else {
+        const [courseRows] = await pool.execute(
+          `SELECT co.offering_id
+           FROM COURSE_OFFERING co
+           WHERE co.faculty_id = ?
+             AND co.course_id = ?
+           LIMIT 1`,
+          [senderId, normalizedTargetId]
+        );
+
+        if (!courseRows[0]) {
+          const error = new Error("Course not found under your offerings");
+          error.status = 403;
+          throw error;
+        }
       }
     }
 
     if (normalizedTargetType === "STUDENT") {
-      const [studentRows] = await pool.execute(
-        `SELECT e.enrollment_id
-         FROM ENROLLMENT e
-         JOIN COURSE_OFFERING co ON co.offering_id = e.offering_id
-         WHERE co.faculty_id = ?
-           AND e.student_id = ?
-         LIMIT 1`,
-        [facultyId, normalizedTargetId]
-      );
+      if (isAdmin) {
+        const [studentRows] = await pool.execute(
+          `SELECT student_id
+           FROM STUDENT
+           WHERE student_id = ?
+           LIMIT 1`,
+          [normalizedTargetId]
+        );
 
-      if (!studentRows[0]) {
-        const error = new Error("Student is not enrolled in your courses");
-        error.status = 403;
-        throw error;
+        if (!studentRows[0]) {
+          const error = new Error("Student not found");
+          error.status = 404;
+          throw error;
+        }
+      } else {
+        const [studentRows] = await pool.execute(
+          `SELECT e.enrollment_id
+           FROM ENROLLMENT e
+           JOIN COURSE_OFFERING co ON co.offering_id = e.offering_id
+           WHERE co.faculty_id = ?
+             AND e.student_id = ?
+           LIMIT 1`,
+          [senderId, normalizedTargetId]
+        );
+
+        if (!studentRows[0]) {
+          const error = new Error("Student is not enrolled in your courses");
+          error.status = 403;
+          throw error;
+        }
       }
     }
 
     if (normalizedTargetType === "FACULTY_ADVISOR") {
+      if (isAdmin) {
+        const error = new Error("FACULTY_ADVISOR target is only available for faculty advisors");
+        error.status = 403;
+        throw error;
+      }
+
       const [adviseeRows] = await pool.execute(
         `SELECT student_id
          FROM STUDENT
          WHERE advisor_id = ?
          LIMIT 1`,
-        [facultyId]
+        [senderId]
       );
 
       if (!adviseeRows[0]) {
@@ -693,13 +740,13 @@ async function sendFacultyNotification(req, res, next) {
       }
 
       // Faculty-advisor broadcast uses faculty_id as notification target id.
-      notificationTargetId = facultyId;
+      notificationTargetId = senderId;
     }
 
     const [result] = await pool.execute(
       `INSERT INTO NOTIFICATION (id, sent_by, message)
        VALUES (?, ?, ?)`,
-      [notificationTargetId, facultyId, normalizedMessage]
+      [notificationTargetId, senderId, normalizedMessage]
     );
 
     res.status(201).json({
@@ -713,9 +760,9 @@ async function sendFacultyNotification(req, res, next) {
 
 async function getFacultyNotificationFeed(req, res, next) {
   try {
-    ensureFacultyRole(req);
+    ensureFacultyOrAdminRole(req);
 
-    const facultyId = String(req.user.id || "").trim();
+    const senderId = String(req.user.id || "").trim();
 
     const [rows] = await pool.execute(
       `SELECT
@@ -728,7 +775,7 @@ async function getFacultyNotificationFeed(req, res, next) {
        WHERE n.sent_by = ?
        ORDER BY n.created_at DESC, n.notification_id DESC
        LIMIT 50`,
-      [facultyId]
+      [senderId]
     );
 
     res.status(200).json({
@@ -1691,6 +1738,62 @@ async function getPicTtCourseTimetable(req, res, next) {
   }
 }
 
+async function getPicTtRooms(req, res, next) {
+  try {
+    ensurePicTtRole(req);
+
+    const [rows] = await pool.execute(
+      `SELECT room_id, capacity, building
+       FROM ROOM
+       ORDER BY room_id`
+    );
+
+    res.status(200).json({
+      message: "Room list retrieved",
+      rooms: rows.map((row) => ({
+        roomId: row.room_id,
+        capacity: row.capacity,
+        building: row.building
+      }))
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function getPicTtOfferings(req, res, next) {
+  try {
+    ensurePicTtRole(req);
+
+    const department = String(req.user.department || "").trim().toUpperCase();
+
+    const [rows] = await pool.execute(
+      `SELECT
+        co.offering_id,
+        co.term_number,
+        c.course_id,
+        c.course_name
+       FROM COURSE_OFFERING co
+       JOIN COURSE c ON c.course_id = co.course_id
+       WHERE UPPER(c.branch) = ?
+       ORDER BY co.term_number DESC, c.course_id ASC`,
+      [department]
+    );
+
+    res.status(200).json({
+      message: "Offering list retrieved",
+      offerings: rows.map((row) => ({
+        offeringId: row.offering_id,
+        termNumber: row.term_number,
+        courseId: row.course_id,
+        courseName: row.course_name
+      }))
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function createPicTtCourseTimetable(req, res, next) {
   try {
     ensurePicTtRole(req);
@@ -2073,14 +2176,24 @@ async function createHodCourseOffering(req, res, next) {
     const { courseId, termNumber, type, facultyId } = req.body;
 
     const normalizedCourseId = String(courseId || "").trim().toUpperCase();
-    const numericTermNumber = Number(termNumber);
+    let numericTermNumber = Number(termNumber);
     const normalizedType = String(type || "").trim();
     const normalizedFacultyId = String(facultyId || "").trim();
 
-    if (!normalizedCourseId || Number.isNaN(numericTermNumber) || numericTermNumber <= 0 || !normalizedType) {
-      const error = new Error("courseId, termNumber and type are required");
+    if (!normalizedCourseId || !normalizedType) {
+      const error = new Error("courseId and type are required");
       error.status = 400;
       throw error;
+    }
+
+    if (Number.isNaN(numericTermNumber) || numericTermNumber <= 0) {
+      const [termRows] = await pool.execute(
+        `SELECT COALESCE(MAX(current_term_number), 1) AS current_term
+         FROM STUDENT
+         WHERE UPPER(branch) = ?`,
+        [department]
+      );
+      numericTermNumber = Number(termRows[0]?.current_term || 1);
     }
 
     await assertCourseInDepartment(normalizedCourseId, department);
@@ -2541,6 +2654,8 @@ module.exports = {
   updateCdcPlacementOpening,
   decideCdcPlacementApplication,
   getPicTtCourseTimetable,
+  getPicTtRooms,
+  getPicTtOfferings,
   createPicTtCourseTimetable,
   updatePicTtCourseTimetable,
   getPicTtExamTimetable,

@@ -4,6 +4,7 @@ const EnrollmentPage = {
   currentTermNumber: 0,
   canShowTAMode: false,
   selectedTAResumeId: "",
+  enrollmentActive: true,
 
   renderModeSelector() {
     const taOption = this.canShowTAMode
@@ -25,6 +26,15 @@ const EnrollmentPage = {
   },
 
   renderCourseEnrollment(options, unavailableCourses) {
+    if (!this.enrollmentActive) {
+      return `
+        <div class="card">
+          <div class="message error" style="margin-top: 10px;">Course enrollment is currently inactive by admin.</div>
+        </div>
+        <div id="enrollMessage"></div>
+      `;
+    }
+
     let html = "";
 
     if (options.length > 0) {
@@ -285,6 +295,7 @@ const EnrollmentPage = {
   async render() {
     try {
       const courseResponse = await API.getEnrollmentOptions();
+      this.enrollmentActive = courseResponse.enrollmentActive !== false;
       this.currentTermNumber = Number(courseResponse.currentTermNumber || 0);
       this.canShowTAMode = this.currentTermNumber === 7 || this.currentTermNumber === 8;
 
@@ -324,6 +335,14 @@ const EnrollmentPage = {
   },
 
   async enrollCourse(offeringId, courseName) {
+    if (!this.enrollmentActive) {
+      const messageDiv = document.getElementById("enrollMessage");
+      if (messageDiv) {
+        messageDiv.innerHTML = `<div class="message error">Enrollment is currently inactive by admin.</div>`;
+      }
+      return;
+    }
+
     try {
       const messageDiv = document.getElementById("enrollMessage");
       if (!messageDiv) return;

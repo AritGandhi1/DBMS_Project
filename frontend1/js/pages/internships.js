@@ -1,27 +1,19 @@
 const InternshipsPage = {
   id: "internships",
 
-  groupByStatus(records) {
-    return {
-      accepted: records.filter((record) => record.status === "Accepted"),
-      applied: records.filter((record) => record.status === "Applied"),
-      rejected: records.filter((record) => record.status === "Rejected")
-    };
-  },
-
-  renderStatusTable(title, records) {
+  renderApplicationsTable(records) {
     if (records.length === 0) {
       return `
         <div class="card" style="margin-top: 16px;">
-          <div class="card-title">${title}</div>
-          <div class="message info" style="margin-top: 20px;">No records in this category.</div>
+          <div class="card-title">My Applications</div>
+          <div class="message info" style="margin-top: 20px;">No internship applications yet.</div>
         </div>
       `;
     }
 
     let tableHtml = `
       <div class="card" style="margin-top: 16px;">
-        <div class="card-title">${title} (${records.length})</div>
+        <div class="card-title">My Applications (${records.length})</div>
         <table>
           <thead>
             <tr>
@@ -29,6 +21,8 @@ const InternshipsPage = {
               <th>Role</th>
               <th>Package</th>
               <th>Duration</th>
+              <th>Status</th>
+              <th>Resume Submitted</th>
             </tr>
           </thead>
           <tbody>
@@ -41,6 +35,8 @@ const InternshipsPage = {
           <td>${record.role}</td>
           <td>${record.package}</td>
           <td>${record.duration} months</td>
+          <td>${record.status}</td>
+          <td>${record.resumeFileName || (record.resumeId ? `Resume #${record.resumeId}` : "-")}</td>
         </tr>
       `;
     });
@@ -106,7 +102,6 @@ const InternshipsPage = {
     try {
       const response = await API.getInternships();
       const internships = response.internships || [];
-      const groupedInternships = this.groupByStatus(internships);
       const openings = response.openings || [];
       const currentTermNumber = response.currentTermNumber;
       const canApply = Boolean(response.canApply);
@@ -129,9 +124,7 @@ const InternshipsPage = {
               <strong>Note:</strong> Make sure you have uploaded a resume before applying. <a href="#/student-resume" style="color: #0066cc; text-decoration: underline;">Manage Resumes</a>
             </div>
           </div>
-          ${this.renderStatusTable("Accepted", groupedInternships.accepted)}
-          ${this.renderStatusTable("Applied", groupedInternships.applied)}
-          ${this.renderStatusTable("Rejected", groupedInternships.rejected)}
+          ${this.renderApplicationsTable(internships)}
           <div class="card">
             <div class="card-title">Companies Currently Hiring</div>
             ${this.renderOpeningsTable(openings, canApply, appliedToOpenings)}

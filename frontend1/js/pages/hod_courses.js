@@ -1,6 +1,19 @@
 const HODCoursesPage = {
   id: "hod-courses",
 
+  renderCourseOptions(courses, selectedCourseId = "") {
+    const selected = String(selectedCourseId || "").trim().toUpperCase();
+    const options = (courses || [])
+      .map((c) => {
+        const courseId = String(c.courseId || "").trim().toUpperCase();
+        const isSelected = courseId === selected ? "selected" : "";
+        return `<option value="${courseId}" ${isSelected}>${courseId} - ${c.courseName}</option>`;
+      })
+      .join("");
+
+    return `<option value="" disabled ${selected ? "" : "selected"}>Select Course ID</option>${options}`;
+  },
+
   async render() {
     return `
       <div class="container">
@@ -9,29 +22,38 @@ const HODCoursesPage = {
           <div id="hodCourseMessage"></div>
 
           <div class="card" style="margin-top: 12px;">
+            <div class="card-title" style="font-size: 18px;">Add New Course</div>
+            <form id="hodAddCourseForm" style="margin-bottom: 12px;">
+              <div class="card-grid">
+                <div class="form-group">
+                  <label for="hodCourseId">Course ID</label>
+                  <input id="hodCourseId" required />
+                </div>
+                <div class="form-group">
+                  <label for="hodCourseName">Course Name</label>
+                  <input id="hodCourseName" required />
+                </div>
+                <div class="form-group">
+                  <label for="hodCourseCredits">Credits</label>
+                  <input id="hodCourseCredits" type="number" min="1" step="1" required />
+                </div>
+              </div>
+              <button class="btn btn-primary" type="submit">Add Course</button>
+            </form>
+          </div>
+
+          <div class="card" style="margin-top: 12px;">
             <div class="card-title" style="font-size: 18px;">All Department Courses</div>
             <div id="hodCourseTable"></div>
           </div>
 
           <div class="card" style="margin-top: 12px;">
-            <div class="card-title" style="font-size: 18px;">Course Offerings (Unified Add/Edit/Delete: Name, Credits, Term, Type, Faculty)</div>
+            <div class="card-title" style="font-size: 18px;">Course Offerings (Add: Course ID, Type, Faculty ID)</div>
             <form id="hodAddOfferingForm" style="margin-bottom: 12px;">
               <div class="card-grid">
                 <div class="form-group">
                   <label for="hodOfferingCourseId">Course ID</label>
-                  <input id="hodOfferingCourseId" required />
-                </div>
-                <div class="form-group">
-                  <label for="hodOfferingCourseName">Course Name</label>
-                  <input id="hodOfferingCourseName" required />
-                </div>
-                <div class="form-group">
-                  <label for="hodOfferingCredits">Credits</label>
-                  <input id="hodOfferingCredits" type="number" min="1" step="1" required />
-                </div>
-                <div class="form-group">
-                  <label for="hodOfferingTerm">Term Number</label>
-                  <input id="hodOfferingTerm" type="number" min="1" step="1" required />
+                  <select id="hodOfferingCourseId" required></select>
                 </div>
                 <div class="form-group">
                   <label for="hodOfferingType">Type</label>
@@ -84,10 +106,12 @@ const HODCoursesPage = {
     const msgEl = document.getElementById("hodCourseMessage");
     const courseTableEl = document.getElementById("hodCourseTable");
     const prereqTableEl = document.getElementById("hodPrereqTable");
+    const addCourseForm = document.getElementById("hodAddCourseForm");
     const addOfferingForm = document.getElementById("hodAddOfferingForm");
     const addPrereqForm = document.getElementById("hodAddPrereqForm");
     const offeringTableEl = document.getElementById("hodOfferingTable");
     const facultyListEl = document.getElementById("hodFacultyList");
+    const offeringCourseSelectEl = document.getElementById("hodOfferingCourseId");
 
     const setMessage = (type, text) => {
       msgEl.innerHTML = text ? `<div class="message ${type}">${text}</div>` : "";
@@ -109,7 +133,7 @@ const HODCoursesPage = {
           ? `
             <table>
               <thead>
-                <tr><th>Course ID</th><th>Course Name</th><th>Credits</th><th>Branch</th></tr>
+                <tr><th>Course ID</th><th>Course Name</th><th>Credits</th><th>Branch</th><th>Actions</th></tr>
               </thead>
               <tbody>
                 ${courses.map((c) => `
@@ -118,12 +142,15 @@ const HODCoursesPage = {
                     <td>${c.courseName}</td>
                     <td>${c.credits}</td>
                     <td>${c.branch}</td>
+                    <td><button class="btn btn-danger" data-course-delete="${c.courseId}">Delete</button></td>
                   </tr>
                 `).join("")}
               </tbody>
             </table>
           `
           : '<div class="message info">No courses found for your department.</div>';
+
+        offeringCourseSelectEl.innerHTML = this.renderCourseOptions(courses);
 
         prereqTableEl.innerHTML = prerequisites.length
           ? `
@@ -161,9 +188,9 @@ const HODCoursesPage = {
                   <tr>
                     <td>${o.offeringId}</td>
                     <td>${o.courseId}</td>
-                    <td><input data-offering-field="courseName" data-offering-id="${o.offeringId}" data-course-id="${o.courseId}" value="${o.courseName}" /></td>
-                    <td><input data-offering-field="credits" data-offering-id="${o.offeringId}" data-course-id="${o.courseId}" type="number" min="1" step="1" value="${(courses.find((c) => c.courseId === o.courseId)?.credits) || ''}" /></td>
-                    <td><input data-offering-field="termNumber" data-offering-id="${o.offeringId}" type="number" min="1" step="1" value="${o.termNumber}" /></td>
+                    <td>${o.courseName}</td>
+                    <td>${(courses.find((c) => c.courseId === o.courseId)?.credits) || "-"}</td>
+                    <td>${o.termNumber}</td>
                     <td>
                       <select data-offering-field="type" data-offering-id="${o.offeringId}">
                         ${["Core", "Elective", "Lab", "Breadth", "Lateral"].map((t) => `<option value="${t}" ${t === o.type ? "selected" : ""}>${t}</option>`).join("")}
@@ -217,22 +244,11 @@ const HODCoursesPage = {
         offeringTableEl.querySelectorAll("button[data-offering-update]").forEach((btn) => {
           btn.addEventListener("click", async () => {
             const offeringId = Number(btn.dataset.offeringUpdate);
-            const courseIdEl = offeringTableEl.querySelector(`input[data-offering-field=\"courseName\"][data-offering-id=\"${offeringId}\"]`);
-            const courseId = courseIdEl?.dataset.courseId;
-            const courseNameEl = offeringTableEl.querySelector(`input[data-offering-field=\"courseName\"][data-offering-id=\"${offeringId}\"]`);
-            const creditsEl = offeringTableEl.querySelector(`input[data-offering-field=\"credits\"][data-offering-id=\"${offeringId}\"]`);
-            const termEl = offeringTableEl.querySelector(`input[data-offering-field=\"termNumber\"][data-offering-id=\"${offeringId}\"]`);
             const typeEl = offeringTableEl.querySelector(`select[data-offering-field=\"type\"][data-offering-id=\"${offeringId}\"]`);
             const facultyEl = offeringTableEl.querySelector(`input[data-offering-field=\"facultyId\"][data-offering-id=\"${offeringId}\"]`);
 
             try {
-              await API.updateHodCourse(courseId, {
-                courseName: courseNameEl?.value?.trim(),
-                credits: Number(creditsEl?.value)
-              });
-
               await API.updateHodCourseOffering(offeringId, {
-                termNumber: Number(termEl?.value),
                 type: typeEl?.value,
                 facultyId: (facultyEl?.value || "").trim().toUpperCase()
               });
@@ -262,6 +278,24 @@ const HODCoursesPage = {
             }
           });
         });
+
+        courseTableEl.querySelectorAll("button[data-course-delete]").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const courseId = String(btn.dataset.courseDelete || "").trim().toUpperCase();
+            const confirmed = window.confirm(`Delete course ${courseId}? This will also delete related offerings and prerequisites.`);
+            if (!confirmed) {
+              return;
+            }
+
+            try {
+              await API.deleteHodCourse(courseId);
+              setMessage("success", `Course ${courseId} deleted successfully.`);
+              await load();
+            } catch (error) {
+              setMessage("error", error.message);
+            }
+          });
+        });
       } catch (error) {
         courseTableEl.innerHTML = "";
         prereqTableEl.innerHTML = "";
@@ -284,31 +318,33 @@ const HODCoursesPage = {
       }
     });
 
+    addCourseForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      try {
+        await API.createHodCourse({
+          courseId: document.getElementById("hodCourseId").value.trim().toUpperCase(),
+          courseName: document.getElementById("hodCourseName").value.trim(),
+          credits: Number(document.getElementById("hodCourseCredits").value)
+        });
+        addCourseForm.reset();
+        setMessage("success", "Course added successfully.");
+        await load();
+      } catch (error) {
+        setMessage("error", error.message);
+      }
+    });
+
     addOfferingForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       try {
         const courseId = document.getElementById("hodOfferingCourseId").value.trim().toUpperCase();
-        try {
-          await API.createHodCourse({
-            courseId,
-            courseName: document.getElementById("hodOfferingCourseName").value.trim(),
-            credits: Number(document.getElementById("hodOfferingCredits").value)
-          });
-        } catch (error) {
-          // Allow reusing an existing course while creating a new offering.
-          if (!String(error.message || "").toLowerCase().includes("duplicate")) {
-            throw error;
-          }
-        }
-
         await API.createHodCourseOffering({
           courseId,
-          termNumber: Number(document.getElementById("hodOfferingTerm").value),
           type: document.getElementById("hodOfferingType").value,
           facultyId: document.getElementById("hodOfferingFacultyId").value.trim().toUpperCase()
         });
         addOfferingForm.reset();
-        setMessage("success", "Course and offering added successfully.");
+        setMessage("success", "Offering added successfully.");
         await load();
       } catch (error) {
         setMessage("error", error.message);

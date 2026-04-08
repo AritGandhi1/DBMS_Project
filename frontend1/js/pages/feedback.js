@@ -1,10 +1,20 @@
 const FeedbackPage = {
   id: "feedback",
+  feedbackActive: true,
 
   async render() {
     try {
       const response = await API.getCoursesForFeedback();
       const courses = response.courses || [];
+      this.feedbackActive = response.feedbackActive !== false;
+
+      const inactiveBanner = this.feedbackActive
+        ? ""
+        : `
+          <div class="card" style="margin-bottom: 16px; border-left: 4px solid #dc3545;">
+            <div class="message error" style="margin: 0;">Feedback is currently inactive by admin. Submissions are disabled.</div>
+          </div>
+        `;
 
       if (courses.length === 0) {
         return `
@@ -21,7 +31,7 @@ const FeedbackPage = {
       const withFeedback = courses.filter(c => c.hasFeedback);
       const withoutFeedback = courses.filter(c => !c.hasFeedback);
 
-      let html = `<div class="container">`;
+      let html = `<div class="container">${inactiveBanner}`;
 
       // Courses awaiting feedback
       if (withoutFeedback.length > 0) {
@@ -40,6 +50,7 @@ const FeedbackPage = {
                   <div style="font-size: 12px; color: #666;">Faculty: ${course.facultyName} | Credits: ${course.credits}</div>
                 </div>
                 <button class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;"
+                  ${this.feedbackActive ? "" : "disabled"}
                   onclick="FeedbackPage.openFeedbackForm('${course.offeringId}', '${course.courseId}', '${course.courseName}')">
                   Give Feedback
                 </button>
@@ -88,6 +99,7 @@ const FeedbackPage = {
               <td>${submittedDate}</td>
               <td>
                 <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px;"
+                  ${this.feedbackActive ? "" : "disabled"}
                   onclick="FeedbackPage.openFeedbackForm('${course.offeringId}', '${course.courseId}', '${course.courseName}', ${course.rating}, '${course.comment.replace(/'/g, "\\'")}')">
                   Edit
                 </button>
@@ -119,6 +131,11 @@ const FeedbackPage = {
   },
 
   openFeedbackForm(offeringId, courseId, courseName, existingRating = 0, existingComment = '') {
+    if (!this.feedbackActive) {
+      alert("Feedback is currently inactive by admin.");
+      return;
+    }
+
     let modalHtml = `
       <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;" id="feedbackModal">
         <div style="background: white; border-radius: 8px; padding: 24px; width: 90%; max-width: 500px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
@@ -192,6 +209,11 @@ const FeedbackPage = {
   },
 
   async submitFeedback(offeringId) {
+    if (!this.feedbackActive) {
+      alert("Feedback is currently inactive by admin.");
+      return;
+    }
+
     const rating = parseInt(document.getElementById('ratingInput').value);
     const comment = document.getElementById('commentInput').value;
 

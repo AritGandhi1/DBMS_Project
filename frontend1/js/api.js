@@ -34,6 +34,38 @@ class API {
     }
   }
 
+  static async callFormData(method, endpoint, formData) {
+    try {
+      const token = localStorage.getItem("auth_token");
+      const headers = {};
+
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method,
+        headers,
+        body: formData
+      });
+
+      let json = {};
+      try {
+        json = await response.json();
+      } catch (_) {
+        json = {};
+      }
+
+      if (!response.ok) {
+        throw new Error(json.message || "API Error");
+      }
+
+      return json;
+    } catch (error) {
+      throw error;
+    }
+  }
+
   // Auth endpoints
   static async register(payload) {
     return this.call("POST", "/auth/register", payload);
@@ -268,6 +300,14 @@ class API {
     return this.call("GET", "/faculty/tt/courses");
   }
 
+  static async getPicTtRooms() {
+    return this.call("GET", "/faculty/tt/rooms");
+  }
+
+  static async getPicTtOfferings() {
+    return this.call("GET", "/faculty/tt/offerings");
+  }
+
   static async createPicTtCourseTimetable(payload) {
     return this.call("POST", "/faculty/tt/courses", payload);
   }
@@ -330,5 +370,74 @@ class API {
 
   static async deleteHodCoursePrerequisite(courseId, prereqCourseId) {
     return this.call("DELETE", `/faculty/hod/courses/${encodeURIComponent(courseId)}/prerequisites/${encodeURIComponent(prereqCourseId)}`);
+  }
+
+  // Admin endpoints
+  static async getAdminUsers() {
+    return this.call("GET", "/admin/users");
+  }
+
+  static async getAdminFeedbackStatus() {
+    return this.call("GET", "/admin/feedback-status");
+  }
+
+  static async updateAdminFeedbackStatus(feedbackActive) {
+    return this.call("PUT", "/admin/feedback-status", { feedbackActive: Boolean(feedbackActive) });
+  }
+
+  static async getAdminEnrollmentStatus() {
+    return this.call("GET", "/admin/enrollment-status");
+  }
+
+  static async updateAdminEnrollmentStatus(enrollmentActive) {
+    return this.call("PUT", "/admin/enrollment-status", { enrollmentActive: Boolean(enrollmentActive) });
+  }
+
+  static async endAdminTerm() {
+    return this.call("POST", "/admin/end-term");
+  }
+
+  static async createAdminStudent(payload) {
+    return this.call("POST", "/admin/students", payload);
+  }
+
+  static async updateAdminStudent(studentId, payload) {
+    return this.call("PUT", `/admin/students/${encodeURIComponent(studentId)}`, payload);
+  }
+
+  static async createAdminFaculty(payload) {
+    return this.call("POST", "/admin/faculty", payload);
+  }
+
+  static async updateAdminFaculty(facultyId, payload) {
+    return this.call("PUT", `/admin/faculty/${encodeURIComponent(facultyId)}`, payload);
+  }
+
+  static async uploadAdminStudentsFile(file) {
+    const formData = new FormData();
+    formData.append("file", file);
+    return this.callFormData("POST", "/admin/students/bulk-upload", formData);
+  }
+
+  static async uploadAdminFacultyFile(file) {
+    const formData = new FormData();
+    formData.append("file", file);
+    return this.callFormData("POST", "/admin/faculty/bulk-upload", formData);
+  }
+
+  static async getAdminRooms() {
+    return this.call("GET", "/admin/rooms");
+  }
+
+  static async createAdminRoom(payload) {
+    return this.call("POST", "/admin/rooms", payload);
+  }
+
+  static async updateAdminRoom(roomId, payload) {
+    return this.call("PUT", `/admin/rooms/${encodeURIComponent(roomId)}`, payload);
+  }
+
+  static async deleteAdminRoom(roomId) {
+    return this.call("DELETE", `/admin/rooms/${encodeURIComponent(roomId)}`);
   }
 }

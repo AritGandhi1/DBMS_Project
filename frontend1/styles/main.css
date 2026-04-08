@@ -1082,3 +1082,240 @@ tbody tr:hover {
     font-size: 14px;
   }
 }
+
+/* Admin User Management */
+.admin-users-page {
+  display: grid;
+  gap: 16px;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.admin-users-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+  border: 1px solid #dbe2ff;
+  background: linear-gradient(135deg, #ffffff 0%, #f4f7ff 100%);
+}
+
+.admin-users-kicker {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+  font-weight: 700;
+  color: #5464c8;
+  margin-bottom: 8px;
+}
+
+.admin-users-title {
+  margin-bottom: 8px;
+}
+
+.admin-users-subtitle {
+  color: #5f667f;
+  max-width: 560px;
+  line-height: 1.5;
+}
+
+.admin-users-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(100px, 1fr));
+  gap: 10px;
+  width: min(420px, 100%);
+}
+
+.admin-users-stat-card {
+  background: #fff;
+  border: 1px solid #dfe4ff;
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+}
+
+.admin-users-stat-label {
+  font-size: 12px;
+  color: #6f789e;
+}
+
+.admin-users-stat-value {
+  margin-top: 6px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #34407e;
+}
+
+.admin-users-form-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-users-panel {
+  border: 1px solid #eceffd;
+  box-shadow: 0 12px 24px rgba(44, 63, 144, 0.08);
+  min-width: 0;
+}
+
+.admin-users-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.admin-users-section-title {
+  font-size: 18px;
+  margin-bottom: 0;
+}
+
+.admin-users-badge {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #334188;
+  background: #eaf0ff;
+  border: 1px solid #cfd9ff;
+  border-radius: 999px;
+  padding: 5px 10px;
+}
+
+.admin-users-grid-tight {
+  margin-bottom: 14px;
+  gap: 12px;
+}
+
+.admin-users-table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.admin-users-search {
+  width: min(380px, 100%);
+  padding: 11px 14px;
+  border: 1px solid #d3daf8;
+  border-radius: 10px;
+  font-size: 14px;
+  background: #f9fbff;
+}
+
+.admin-users-search:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.12);
+}
+
+.admin-users-table-wrap {
+  overflow: auto;
+  border: 1px solid #ecf0ff;
+  border-radius: 10px;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-users-table-wrap table {
+  width: max-content;
+  min-width: 100%;
+}
+
+.admin-users-table-wrap thead {
+  background: #f1f5ff;
+}
+
+.admin-users-table-wrap th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #4b5375;
+}
+
+.admin-users-table-wrap td {
+  background: #fff;
+  vertical-align: middle;
+}
+
+.admin-users-table-wrap td input,
+.admin-users-table-wrap td select {
+  min-width: 104px;
+  border: 1px solid #d7dcf3;
+  border-radius: 8px;
+  padding: 9px 10px;
+  font-size: 13px;
+  background: #fff;
+}
+
+.admin-users-table-wrap td input:focus,
+.admin-users-table-wrap td select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.admin-users-table-wrap .btn {
+  width: 100%;
+  min-width: 90px;
+  padding: 9px 10px;
+}
+
+@media (max-width: 1100px) {
+  .admin-users-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-users-hero {
+    flex-direction: column;
+  }
+
+  .admin-users-stats {
+    width: 100%;
+  }
+
+  .admin-users-table-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-users-search {
+    width: 100%;
+  }
+
+  .admin-users-table-wrap table {
+    min-width: 760px;
+  }
+
+  .admin-users-table-wrap td input,
+  .admin-users-table-wrap td select {
+    min-width: 88px;
+    padding: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-users-stat-value {
+    font-size: 18px;
+  }
+
+  .admin-users-panel {
+    padding: 12px;
+  }
+
+  .admin-users-table-wrap table {
+    min-width: 700px;
+  }
+
+  .admin-users-table-wrap td input,
+  .admin-users-table-wrap td select {
+    min-width: 76px;
+    padding: 7px;
+  }
+}

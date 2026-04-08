@@ -109,10 +109,6 @@ async function findUserForLogin(userId) {
   }
 
   const numericId = Number(value);
-  if (Number.isNaN(numericId)) {
-    return null;
-  }
-
   const [adminRows] = await pool.execute(
     `SELECT CAST(admin_id AS CHAR) AS id,
             username AS name,
@@ -120,8 +116,9 @@ async function findUserForLogin(userId) {
             password AS passwordHash
      FROM ADMIN
      WHERE admin_id = ?
+        OR username = ?
      LIMIT 1`,
-    [numericId]
+    [Number.isNaN(numericId) ? -1 : numericId, value]
   );
 
   if (adminRows[0]) {

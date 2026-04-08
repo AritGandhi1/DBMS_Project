@@ -1,6 +1,38 @@
 const TTCoursePage = {
   id: "tt-course",
 
+  renderOfferingOptions(offerings, selectedOfferingId) {
+    const selected = String(selectedOfferingId || "");
+    const options = (offerings || []).map((offering) => {
+      const offeringId = String(offering.offeringId || "");
+      const courseId = String(offering.courseId || "");
+      const selectedAttr = offeringId === selected ? "selected" : "";
+      return `<option value="${offeringId}" ${selectedAttr}>${offeringId} (${courseId})</option>`;
+    }).join("");
+
+    return `<option value="" disabled ${selected ? "" : "selected"}>${options ? "Select Offering" : "No Offerings Available"}</option>${options}`;
+  },
+
+  renderRoomOptions(rooms, selectedRoomId) {
+    const selected = String(selectedRoomId || "");
+    const roomOptions = (rooms || []).map((room) => {
+      const roomId = String(room.roomId || "");
+      const capacity = room.capacity == null ? "N/A" : room.capacity;
+      const selectedAttr = roomId === selected ? "selected" : "";
+      return `<option value="${roomId}" ${selectedAttr}>${roomId} (${capacity})</option>`;
+    }).join("");
+
+    if (!selected && roomOptions) {
+      return `<option value="" disabled selected>Select Room</option>${roomOptions}`;
+    }
+
+    if (selected && !roomOptions.includes(`value="${selected}"`)) {
+      return `<option value="${selected}" selected>${selected}</option>${roomOptions}`;
+    }
+
+    return `<option value="" disabled ${roomOptions ? "" : "selected"}>${roomOptions ? "Select Room" : "No Rooms Available"}</option>${roomOptions}`;
+  },
+
   async render() {
     return `
       <div class="container">
@@ -13,7 +45,7 @@ const TTCoursePage = {
               <div class="card-grid">
                 <div class="form-group">
                   <label for="ttCourseOfferingId">Offering ID</label>
-                  <input id="ttCourseOfferingId" type="number" min="1" required />
+                  <select id="ttCourseOfferingId" required></select>
                 </div>
                 <div class="form-group">
                   <label for="ttCourseDay">Day</label>
@@ -35,7 +67,7 @@ const TTCoursePage = {
                 </div>
                 <div class="form-group">
                   <label for="ttCourseRoomId">Room ID</label>
-                  <input id="ttCourseRoomId" required />
+                  <select id="ttCourseRoomId" required></select>
                 </div>
               </div>
               <button class="btn btn-primary" type="submit">Add Course Schedule</button>
@@ -54,6 +86,8 @@ const TTCoursePage = {
     const msgEl = document.getElementById("ttCourseMessage");
     const tableEl = document.getElementById("ttCourseTable");
     const form = document.getElementById("ttCourseCreateForm");
+    const roomSelectEl = document.getElementById("ttCourseRoomId");
+    const offeringSelectEl = document.getElementById("ttCourseOfferingId");
 
     const setMessage = (type, text) => {
       msgEl.innerHTML = text ? `<div class="message ${type}">${text}</div>` : "";
@@ -61,8 +95,17 @@ const TTCoursePage = {
 
     const load = async () => {
       try {
-        const data = await API.getPicTtCourseTimetable();
-        const schedules = data.schedules || [];
+        const [timetableData, roomData, offeringData] = await Promise.all([
+          API.getPicTtCourseTimetable(),
+          API.getPicTtRooms(),
+          API.getPicTtOfferings()
+        ]);
+        const schedules = timetableData.schedules || [];
+        const rooms = roomData.rooms || [];
+        const offerings = offeringData.offerings || [];
+
+        roomSelectEl.innerHTML = this.renderRoomOptions(rooms, "");
+        offeringSelectEl.innerHTML = this.renderOfferingOptions(offerings, "");
 
         tableEl.innerHTML = schedules.length
           ? `
@@ -76,7 +119,7 @@ const TTCoursePage = {
                 ${schedules.map((s) => `
                   <tr>
                     <td>${s.timetableId}</td>
-                    <td>${s.offeringId}</td>
+                    <td>${s.offeringId} (${s.courseId})</td>
                     <td>${s.courseId} - ${s.courseName}</td>
                     <td>${s.termNumber}</td>
                     <td>
@@ -89,7 +132,9 @@ const TTCoursePage = {
                       <input data-tt-field="endTime" data-tt-id="${s.timetableId}" type="time" value="${String(s.endTime || "").slice(0, 5)}" />
                     </td>
                     <td>
-                      <input data-tt-field="roomId" data-tt-id="${s.timetableId}" value="${s.roomId || ""}" />
+                      <select data-tt-field="roomId" data-tt-id="${s.timetableId}">
+                        ${this.renderRoomOptions(rooms, s.roomId)}
+                      </select>
                     </td>
                     <td>
                       <button class="btn btn-primary" data-tt-update-id="${s.timetableId}">Update</button>
@@ -107,7 +152,7 @@ const TTCoursePage = {
             const dayEl = tableEl.querySelector(`select[data-tt-field=\"day\"][data-tt-id=\"${timetableId}\"]`);
             const startEl = tableEl.querySelector(`input[data-tt-field=\"startTime\"][data-tt-id=\"${timetableId}\"]`);
             const endEl = tableEl.querySelector(`input[data-tt-field=\"endTime\"][data-tt-id=\"${timetableId}\"]`);
-            const roomEl = tableEl.querySelector(`input[data-tt-field=\"roomId\"][data-tt-id=\"${timetableId}\"]`);
+            const roomEl = tableEl.querySelector(`select[data-tt-field=\"roomId\"][data-tt-id=\"${timetableId}\"]`);
 
             try {
               await API.updatePicTtCourseTimetable(timetableId, {

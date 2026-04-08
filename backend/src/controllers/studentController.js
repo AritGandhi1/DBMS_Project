@@ -1,5 +1,48 @@
 const pool = require("../config/db");
 
+async function ensureAppSettingsTable() {
+  await pool.execute(
+    `CREATE TABLE IF NOT EXISTS APP_SETTINGS (
+      setting_key VARCHAR(100) PRIMARY KEY,
+      setting_value VARCHAR(255) NOT NULL
+    )`
+  );
+}
+
+async function getFeedbackActiveSetting() {
+  await ensureAppSettingsTable();
+
+  const [rows] = await pool.execute(
+    `SELECT setting_value
+     FROM APP_SETTINGS
+     WHERE setting_key = 'feedback_active'
+     LIMIT 1`
+  );
+
+  if (!rows[0]) {
+    return true;
+  }
+
+  return String(rows[0].setting_value || "1") === "1";
+}
+
+async function getEnrollmentActiveSetting() {
+  await ensureAppSettingsTable();
+
+  const [rows] = await pool.execute(
+    `SELECT setting_value
+     FROM APP_SETTINGS
+     WHERE setting_key = 'enrollment_active'
+     LIMIT 1`
+  );
+
+  if (!rows[0]) {
+    return true;
+  }
+
+  return String(rows[0].setting_value || "1") === "1";
+}
+
 async function getStudentCareerContext(studentId) {
   const [studentRows] = await pool.execute(
     `SELECT student_id, current_term_number, branch
@@ -429,18 +472,21 @@ async function getStudentInternships(req, res, next) {
 
     const [rows] = await pool.execute(
       `SELECT
-        internship_id,
-        opening_id,
-        company,
-        role,
-        package,
-        duration,
-        status,
-        applied_at,
-        decision_at
-       FROM INTERNSHIP
-       WHERE student_id = ?
-       ORDER BY internship_id DESC`,
+        i.internship_id,
+        i.opening_id,
+        i.resume_id,
+        sr.file_name AS resume_file_name,
+        i.company,
+        i.role,
+        i.package,
+        i.duration,
+        i.status,
+        i.applied_at,
+        i.decision_at
+       FROM INTERNSHIP i
+       LEFT JOIN STUDENT_RESUME sr ON sr.resume_id = i.resume_id
+       WHERE i.student_id = ?
+       ORDER BY i.internship_id DESC`,
       [studentId]
     );
 
@@ -462,6 +508,8 @@ async function getStudentInternships(req, res, next) {
     const internships = rows.map((row) => ({
       internshipId: row.internship_id,
       openingId: row.opening_id,
+      resumeId: row.resume_id,
+      resumeFileName: row.resume_file_name || null,
       company: row.company,
       role: row.role,
       package: row.package,
@@ -623,17 +671,20 @@ async function getStudentPlacements(req, res, next) {
 
     const [rows] = await pool.execute(
       `SELECT
-        placement_id,
-        opening_id,
-        company,
-        role,
-        package,
-        status,
-        applied_at,
-        decision_at
-       FROM PLACEMENT
-       WHERE student_id = ?
-       ORDER BY placement_id DESC`,
+        p.placement_id,
+        p.opening_id,
+        p.resume_id,
+        sr.file_name AS resume_file_name,
+        p.company,
+        p.role,
+        p.package,
+        p.status,
+        p.applied_at,
+        p.decision_at
+       FROM PLACEMENT p
+       LEFT JOIN STUDENT_RESUME sr ON sr.resume_id = p.resume_id
+       WHERE p.student_id = ?
+       ORDER BY p.placement_id DESC`,
       [studentId]
     );
 
@@ -654,6 +705,8 @@ async function getStudentPlacements(req, res, next) {
     const placements = rows.map((row) => ({
       placementId: row.placement_id,
       openingId: row.opening_id,
+      resumeId: row.resume_id,
+      resumeFileName: row.resume_file_name || null,
       company: row.company,
       role: row.role,
       package: row.package,
@@ -899,6 +952,7 @@ async function getEnrollmentOptions(req, res, next) {
     }
 
     const studentId = req.user.id;
+    const enrollmentActive = await getEnrollmentActiveSetting();
 
     const [studentRows] = await pool.execute(
       `SELECT student_id, current_term_number, branch
@@ -920,7 +974,19 @@ async function getEnrollmentOptions(req, res, next) {
     if (!studentBranch) {
       return res.status(200).json({
         message: "Student branch is not set",
+        enrollmentActive,
         enrollmentOptions: []
+      });
+    }
+
+    if (!enrollmentActive) {
+      return res.status(200).json({
+        message: "Enrollment is currently inactive",
+        currentTermNumber: student.current_term_number,
+        studentBranch,
+        enrollmentActive,
+        enrollmentOptions: [],
+        unavailableCourses: []
       });
     }
 
@@ -1016,6 +1082,7 @@ async function getEnrollmentOptions(req, res, next) {
       message: "Enrollment options retrieved",
       currentTermNumber: student.current_term_number,
       studentBranch,
+      enrollmentActive,
       enrollmentOptions,
       unavailableCourses
     });
@@ -1033,6 +1100,14 @@ async function enrollCourse(req, res, next) {
     }
 
     const studentId = req.user.id;
+    const enrollmentActive = await getEnrollmentActiveSetting();
+
+    if (!enrollmentActive) {
+      const error = new Error("Enrollment is currently inactive");
+      error.status = 403;
+      throw error;
+    }
+
     const { offeringId } = req.body;
 
     if (!offeringId) {
@@ -1348,6 +1423,7 @@ async function getCoursesForFeedback(req, res, next) {
     }
 
     const studentId = req.user.id;
+    const feedbackActive = await getFeedbackActiveSetting();
 
     const [rows] = await pool.execute(
       `SELECT
@@ -1387,6 +1463,7 @@ async function getCoursesForFeedback(req, res, next) {
 
     res.status(200).json({
       message: "Courses for feedback retrieved",
+      feedbackActive,
       courses
     });
   } catch (error) {
@@ -1403,6 +1480,14 @@ async function submitFeedback(req, res, next) {
     }
 
     const studentId = req.user.id;
+    const feedbackActive = await getFeedbackActiveSetting();
+
+    if (!feedbackActive) {
+      const error = new Error("Feedback is currently inactive");
+      error.status = 403;
+      throw error;
+    }
+
     const { offeringId, rating, comment } = req.body;
 
     if (!offeringId || !rating) {

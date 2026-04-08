@@ -1,6 +1,53 @@
 const DashboardPage = {
   id: "dashboard",
 
+  renderAdminDashboard() {
+    const user = Auth.getUser() || {};
+
+    return `
+      <div class="container">
+        <div class="card">
+          <div class="card-title">Admin Dashboard</div>
+          <div class="card-grid">
+            <div class="card-item">
+              <div class="card-item-label">Name</div>
+              <div class="card-item-value" style="font-size: 16px; color: #333;">${user.name || "Admin"}</div>
+            </div>
+            <div class="card-item">
+              <div class="card-item-label">Admin ID</div>
+              <div class="card-item-value" style="font-size: 16px; color: #333;">${user.id || "N/A"}</div>
+            </div>
+            <div class="card-item">
+              <div class="card-item-label">Role</div>
+              <div class="card-item-value" style="font-size: 16px; color: #333;">${user.role || "ADMIN"}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dashboard-grid">
+          <div class="stat-card success">
+            <div class="stat-label">Feedback Status</div>
+            <div class="stat-value" id="adminFeedbackStatusValue">Loading...</div>
+            <button class="btn btn-primary" style="margin-top: 10px;" id="adminToggleFeedbackBtn" type="button">Toggle</button>
+          </div>
+          <div class="stat-card info">
+            <div class="stat-label">Enrollment Status</div>
+            <div class="stat-value" id="adminEnrollmentStatusValue">Loading...</div>
+            <button class="btn btn-primary" style="margin-top: 10px;" id="adminToggleEnrollmentBtn" type="button">Toggle</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Admin Access</div>
+          <div class="message info">Admin login is active. Use User Management to create and update student/faculty accounts.</div>
+          <div style="margin-top: 12px;">
+            <button class="btn btn-danger" id="adminEndTermBtn" type="button">End Term</button>
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
   renderFacultyDashboard(data) {
     const faculty = data.faculty || {};
     const courses = data.courses || [];
@@ -182,6 +229,10 @@ const DashboardPage = {
     try {
       const user = Auth.getUser();
 
+      if (user?.role === "ADMIN") {
+        return this.renderAdminDashboard();
+      }
+
       if (user?.role === "FACULTY") {
         const facultyDashboard = await API.getFacultyDashboard();
         return this.renderFacultyDashboard(facultyDashboard);
@@ -200,6 +251,117 @@ const DashboardPage = {
   async mount() {
     try {
       const user = Auth.getUser();
+      if (user?.role === "ADMIN") {
+        const statusEl = document.getElementById("adminFeedbackStatusValue");
+        const toggleBtn = document.getElementById("adminToggleFeedbackBtn");
+        const enrollmentStatusEl = document.getElementById("adminEnrollmentStatusValue");
+        const toggleEnrollmentBtn = document.getElementById("adminToggleEnrollmentBtn");
+        const endTermBtn = document.getElementById("adminEndTermBtn");
+
+        const loadStatus = async () => {
+          const status = await API.getAdminFeedbackStatus();
+          const isActive = Boolean(status.feedbackActive);
+          if (statusEl) {
+            statusEl.textContent = isActive ? "Active" : "Inactive";
+          }
+          if (toggleBtn) {
+            toggleBtn.textContent = isActive ? "Set Inactive" : "Set Active";
+          }
+          return isActive;
+        };
+
+        let currentActive = true;
+        let currentEnrollmentActive = true;
+        try {
+          currentActive = await loadStatus();
+          const enrollmentStatus = await API.getAdminEnrollmentStatus();
+          currentEnrollmentActive = Boolean(enrollmentStatus.enrollmentActive);
+          if (enrollmentStatusEl) {
+            enrollmentStatusEl.textContent = currentEnrollmentActive ? "Active" : "Inactive";
+          }
+          if (toggleEnrollmentBtn) {
+            toggleEnrollmentBtn.textContent = currentEnrollmentActive ? "Set Inactive" : "Set Active";
+          }
+        } catch (error) {
+          if (statusEl) {
+            statusEl.textContent = "Error";
+          }
+          if (toggleBtn) {
+            toggleBtn.disabled = true;
+          }
+          if (enrollmentStatusEl) {
+            enrollmentStatusEl.textContent = "Error";
+          }
+          if (toggleEnrollmentBtn) {
+            toggleEnrollmentBtn.disabled = true;
+          }
+          return;
+        }
+
+        if (toggleBtn) {
+          toggleBtn.addEventListener("click", async () => {
+            toggleBtn.disabled = true;
+            try {
+              const updated = await API.updateAdminFeedbackStatus(!currentActive);
+              currentActive = Boolean(updated.feedbackActive);
+              await loadStatus();
+            } catch (error) {
+              alert(error.message || "Failed to update feedback status");
+            } finally {
+              toggleBtn.disabled = false;
+            }
+          });
+        }
+
+        if (toggleEnrollmentBtn) {
+          toggleEnrollmentBtn.addEventListener("click", async () => {
+            toggleEnrollmentBtn.disabled = true;
+            try {
+              const updated = await API.updateAdminEnrollmentStatus(!currentEnrollmentActive);
+              currentEnrollmentActive = Boolean(updated.enrollmentActive);
+              if (enrollmentStatusEl) {
+                enrollmentStatusEl.textContent = currentEnrollmentActive ? "Active" : "Inactive";
+              }
+              toggleEnrollmentBtn.textContent = currentEnrollmentActive ? "Set Inactive" : "Set Active";
+            } catch (error) {
+              alert(error.message || "Failed to update enrollment status");
+            } finally {
+              toggleEnrollmentBtn.disabled = false;
+            }
+          });
+        }
+
+        if (endTermBtn) {
+          endTermBtn.addEventListener("click", async () => {
+            const confirmed = window.confirm(
+              "Are you sure you want to end the term? This will clear course offerings, feedback, enrollments, timetables, and notifications."
+            );
+
+            if (!confirmed) {
+              return;
+            }
+
+            endTermBtn.disabled = true;
+            const previousText = endTermBtn.textContent;
+            endTermBtn.textContent = "Processing...";
+
+            try {
+              const response = await API.endAdminTerm();
+              alert(
+                `Term ended successfully. Students processed: ${response.studentsProcessed || 0}, GPA updated: ${response.gpaUpdatedCount || 0}, Term incremented: ${response.termIncrementedCount || 0}.`
+              );
+            } catch (error) {
+              alert(error.message || "Failed to end term");
+            } finally {
+              endTermBtn.disabled = false;
+              endTermBtn.textContent = previousText || "End Term";
+            }
+          });
+        }
+
+        return;
+      }
+
       if (user?.role === "FACULTY") {
         return;
       }
