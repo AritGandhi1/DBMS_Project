@@ -171,6 +171,16 @@ const DashboardPage = {
     ` : '';
 
     return `
+        <div class="carousel-container">
+      <div class="carousel-track" id="carouselTrack">
+        <div class="carousel-slide">📢 Enrollment is now open for Term 5</div>
+        <div class="carousel-slide">📅 Mid-sem exams start from Nov 12</div>
+        <div class="carousel-slide">🎓 Placement drive by Infosys on Nov 20</div>
+      </div>
+      <button class="carousel-btn carousel-prev" onclick="carouselPrev()">&#8249;</button>
+      <button class="carousel-btn carousel-next" onclick="carouselNext()">&#8250;</button>
+    </div>
+
       <div class="container">
         <div class="card">
           <div class="card-title">Student Profile</div>
@@ -382,5 +392,22 @@ const DashboardPage = {
     } catch (error) {
       console.error("Error loading dashboard stats:", error);
     }
+
+
+     // Carousel
+  let current = 0;
+  const slides = document.querySelectorAll('.carousel-slide');
+  const track = document.getElementById('carouselTrack');
+
+  const goTo = (index) => {
+    current = (index + slides.length) % slides.length;
+    track.style.transform = `translateX(-${current * 100}%)`;
+  };
+
+  window.carouselPrev = () => goTo(current - 1);
+  window.carouselNext = () => goTo(current + 1);
+
+  // Auto-advance every 4 seconds
+  setInterval(() => goTo(current + 1), 4000);
   }
 };

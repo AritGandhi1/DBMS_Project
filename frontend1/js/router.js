@@ -28,6 +28,25 @@ const pages = [
   StudentResumePage
 ];
 
+// At the top of router.js, outside the Router object
+let bgCarouselInterval = null;
+
+function bgCarouselInit() {
+  if (bgCarouselInterval) clearInterval(bgCarouselInterval); // clear old one
+  const track = document.getElementById('bgCarouselTrack');
+  if (!track) return;
+  const slides = track.querySelectorAll('.bg-carousel-slide');
+  if (!slides.length) return;
+
+  let current = 0;
+  const goTo = (index) => {
+    current = (index + slides.length) % slides.length;
+    track.style.transform = `translateX(-${current * 100}%)`;
+  };
+
+  bgCarouselInterval = setInterval(() => goTo(current + 1), 5000);
+}
+
 const Router = {
   currentPage: null,
   isNavigating: false,
@@ -201,12 +220,14 @@ const Router = {
 
       if (Auth.isAuthenticated() && page.id !== 'login' && page.id !== 'register') {
         // Render header for authenticated users
-        app.innerHTML = this.renderHeader(route) + '<div id="page-content"></div>';
+        app.innerHTML = this.renderHeader(route) + this.renderBgCarousel() + '<div id="page-content"></div>';
+        bgCarouselInit();
         if (role === 'STUDENT') {
           this.loadNotifications();
         }
       } else {
-        app.innerHTML = '<div id="page-content"></div>';
+     app.innerHTML = this.renderBgCarousel() + '<div id="page-content"></div>';
+  bgCarouselInit();
       }
 
       // Render page
@@ -401,7 +422,7 @@ const Router = {
     return `
       <div class="header">
         <div class="header-content">
-          <div class="logo">DBMS Portal</div>
+          <div><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRnJrGniI_xJjOVxV1uCMY5eyo9B0OhsJcFFg&s" alt="Logo" class="logo"></div>
           <div class="nav">
             <a href="#/dashboard" class="nav-link ${activeClass('dashboard')}">Dashboard</a>
             ${isFaculty ? facultyNav : isAdmin ? adminNav : studentNav}
@@ -420,13 +441,29 @@ const Router = {
           <div class="user-info">
             <span class="user-name">${user?.name || 'User'}</span>
             ${notifications}
-            <button class="btn btn-secondary" onclick="Auth.logout()">Logout</button>
+            <button class="btn btn-logout" onclick="Auth.logout()">Logout</button>
           </div>
         </div>
       </div>
     `;
-  }
+  },
+
+renderBgCarousel() {
+  return `
+    <div class="bg-carousel">
+      <div class="bg-carousel-track" id="bgCarouselTrack">
+        <div class="bg-carousel-slide" style="background-image: url('./assets/images/brahmaputra-hall-of-residence-iit-campus.jpg')"></div>
+        <div class="bg-carousel-slide" style="background-image: url('./assets/images/main-gate.jpg')"></div>
+        <div class="bg-carousel-slide" style="background-image: url('./assets/images/hostel.jpeg')"></div>
+      </div>
+      <div class="bg-carousel-overlay"></div>
+    </div>
+  `;
+}
+  
 };
+
+
 
 // Listen for hash changes
 window.addEventListener('hashchange', () => {
@@ -442,4 +479,23 @@ document.addEventListener('click', (event) => {
   if (!wrap.contains(event.target)) {
     Router.closeNotifications();
   }
-});
+},
+
+
+
+function bgCarouselInit() {
+  const track = document.getElementById('bgCarouselTrack');
+  if (!track) return;
+  const slides = track.querySelectorAll('.bg-carousel-slide');
+  if (!slides.length) return;
+
+  let current = 0;
+  const goTo = (index) => {
+    current = (index + slides.length) % slides.length;
+    track.style.transform = `translateX(-${current * 100}%)`;
+  };
+
+  setInterval(() => goTo(current + 1), 5000);
+}
+
+);

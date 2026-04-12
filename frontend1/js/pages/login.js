@@ -5,7 +5,8 @@ const LoginPage = {
     return `
       <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh;">
         <div class="form-container">
-          <h1 style="text-align: center; margin-bottom: 30px; color: #667eea;">DBMS Student Portal</h1>
+        <img src="./assets/images/Indian_Institute_of_Technology_Bhubaneswar_Logo.svg.png" alt="Login Background" class="login-logo">
+          <h1 style="text-align: center; margin-bottom: 30px; color: #667eea;">Student Portal</h1>
           <form id="loginForm">
             <div class="form-group">
               <label for="userId">Student ID / Faculty ID</label>
