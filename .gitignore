@@ -16,4 +16,5 @@ yarn-error.log*
 
 # Build output
 dist/
-build/
+
+backend/testconn.js

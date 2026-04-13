@@ -118,29 +118,33 @@ const CDCPlacementsPage = {
 
         applicationsEl.innerHTML = applications.length
           ? `
-            <table>
-              <thead>
-                <tr><th>ID</th><th>Student</th><th>Name</th><th>Company</th><th>Role</th><th>Status</th><th>Actions</th></tr>
-              </thead>
-              <tbody>
-                ${applications.map((a) => `
-                  <tr>
-                    <td>${a.placementId}</td>
-                    <td>${a.studentId}</td>
-                    <td>${a.studentName}</td>
-                    <td>${a.company}</td>
-                    <td>${a.role}</td>
-                    <td>${a.status}</td>
-                    <td>
-                      ${a.status === "Applied" ? `
-                        <button class="btn btn-primary" data-placement-action="accept" data-placement-id="${a.placementId}" style="margin-right:8px;">Accept</button>
-                        <button class="btn btn-danger" data-placement-action="reject" data-placement-id="${a.placementId}">Reject</button>
-                      ` : '-'}
-                    </td>
-                  </tr>
-                `).join("")}
-              </tbody>
-            </table>
+            <div class="table-wrap">
+              <table class="cdc-applications-table">
+                <thead>
+                  <tr><th>ID</th><th>Student</th><th>Name</th><th>Company</th><th>Role</th><th>Status</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                  ${applications.map((a) => `
+                    <tr>
+                      <td>${a.placementId}</td>
+                      <td>${a.studentId}</td>
+                      <td>${a.studentName}</td>
+                      <td>${a.company}</td>
+                      <td>${a.role}</td>
+                      <td>${a.status}</td>
+                      <td>
+                        ${a.status === "Applied" ? `
+                          <div class="cdc-decision-actions">
+                            <button class="btn btn-primary" data-placement-action="accept" data-placement-id="${a.placementId}">Accept</button>
+                            <button class="btn btn-danger" data-placement-action="reject" data-placement-id="${a.placementId}">Reject</button>
+                          </div>
+                        ` : '-'}
+                      </td>
+                    </tr>
+                  `).join("")}
+                </tbody>
+              </table>
+            </div>
           `
           : '<div class="message info">No applications yet.</div>';
 

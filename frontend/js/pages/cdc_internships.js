@@ -139,8 +139,10 @@ const CDCInternshipsPage = {
                       <td>${a.status}</td>
                       <td>
                         ${a.status === "Applied" ? `
-                          <button class="btn btn-primary" data-intern-action="accept" data-intern-id="${a.internshipId}" style="margin-right:8px;">Accept</button>
-                          <button class="btn btn-danger" data-intern-action="reject" data-intern-id="${a.internshipId}">Reject</button>
+                          <div class="cdc-decision-actions">
+                            <button class="btn btn-primary" data-intern-action="accept" data-intern-id="${a.internshipId}">Accept</button>
+                            <button class="btn btn-danger" data-intern-action="reject" data-intern-id="${a.internshipId}">Reject</button>
+                          </div>
                         ` : '-'}
                       </td>
                     </tr>
