@@ -142,7 +142,7 @@ const MarksUpdatePage = {
       const courses = response.courses || [];
 
       if (!courses.length) {
-        setMessage("info", "No current-term courses found for this faculty.");
+        setMessage("info", "No courses found for this faculty.");
         selectEl.innerHTML = '<option value="">No courses</option>';
         return;
       }

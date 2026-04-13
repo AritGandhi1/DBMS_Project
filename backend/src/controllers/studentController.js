@@ -496,7 +496,8 @@ async function getStudentInternships(req, res, next) {
         io.company,
         io.role,
         io.stipend,
-        io.duration_months
+        io.duration_months,
+        io.file_name
        FROM INTERNSHIP_OPENING io
        JOIN INTERNSHIP_BRANCH ib ON io.opening_id = ib.opening_id
        WHERE io.is_active = 1
@@ -524,7 +525,8 @@ async function getStudentInternships(req, res, next) {
       company: row.company,
       role: row.role,
       stipend: row.stipend,
-      durationMonths: row.duration_months
+      durationMonths: row.duration_months,
+      fileName: row.file_name || null
     }));
 
     const appliedToOpenings = rows
@@ -693,7 +695,8 @@ async function getStudentPlacements(req, res, next) {
         po.opening_id,
         po.company,
         po.role,
-        po.ctc
+        po.ctc,
+        po.file_name
        FROM PLACEMENT_OPENING po
        JOIN PLACEMENT_BRANCH pb ON po.opening_id = pb.opening_id
        WHERE po.is_active = 1
@@ -719,7 +722,8 @@ async function getStudentPlacements(req, res, next) {
       openingId: row.opening_id,
       company: row.company,
       role: row.role,
-      ctc: row.ctc
+      ctc: row.ctc,
+      fileName: row.file_name || null
     }));
 
     const appliedToOpenings = rows
@@ -1881,6 +1885,124 @@ async function downloadResume(req, res, next) {
   }
 }
 
+async function downloadInternshipOpeningAttachment(req, res, next) {
+  try {
+    if (req.user.role !== "STUDENT") {
+      const error = new Error("Only students can view internship attachments");
+      error.status = 403;
+      throw error;
+    }
+
+    const studentId = req.user.id;
+    const openingId = Number(req.params.openingId);
+
+    if (Number.isNaN(openingId)) {
+      const error = new Error("openingId must be numeric");
+      error.status = 400;
+      throw error;
+    }
+
+    const [studentRows] = await pool.execute(
+      `SELECT branch FROM STUDENT WHERE student_id = ? LIMIT 1`,
+      [studentId]
+    );
+
+    if (!studentRows[0]) {
+      const error = new Error("Student record not found");
+      error.status = 404;
+      throw error;
+    }
+
+    const [rows] = await pool.execute(
+      `SELECT io.file_name, io.file_data
+       FROM INTERNSHIP_OPENING io
+       JOIN INTERNSHIP_BRANCH ib ON ib.opening_id = io.opening_id
+       WHERE io.opening_id = ?
+         AND io.is_active = 1
+         AND ib.branch = ?
+       LIMIT 1`,
+      [openingId, studentRows[0].branch]
+    );
+
+    if (!rows[0]) {
+      const error = new Error("Internship opening not found");
+      error.status = 404;
+      throw error;
+    }
+
+    if (!rows[0].file_name || !rows[0].file_data) {
+      const error = new Error("No attachment available for this internship opening");
+      error.status = 404;
+      throw error;
+    }
+
+    res.setHeader("Content-Type", "application/octet-stream");
+    res.setHeader("Content-Disposition", `inline; filename="${rows[0].file_name}"`);
+    res.send(rows[0].file_data);
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function downloadPlacementOpeningAttachment(req, res, next) {
+  try {
+    if (req.user.role !== "STUDENT") {
+      const error = new Error("Only students can view placement attachments");
+      error.status = 403;
+      throw error;
+    }
+
+    const studentId = req.user.id;
+    const openingId = Number(req.params.openingId);
+
+    if (Number.isNaN(openingId)) {
+      const error = new Error("openingId must be numeric");
+      error.status = 400;
+      throw error;
+    }
+
+    const [studentRows] = await pool.execute(
+      `SELECT branch FROM STUDENT WHERE student_id = ? LIMIT 1`,
+      [studentId]
+    );
+
+    if (!studentRows[0]) {
+      const error = new Error("Student record not found");
+      error.status = 404;
+      throw error;
+    }
+
+    const [rows] = await pool.execute(
+      `SELECT po.file_name, po.file_data
+       FROM PLACEMENT_OPENING po
+       JOIN PLACEMENT_BRANCH pb ON pb.opening_id = po.opening_id
+       WHERE po.opening_id = ?
+         AND po.is_active = 1
+         AND pb.branch = ?
+       LIMIT 1`,
+      [openingId, studentRows[0].branch]
+    );
+
+    if (!rows[0]) {
+      const error = new Error("Placement opening not found");
+      error.status = 404;
+      throw error;
+    }
+
+    if (!rows[0].file_name || !rows[0].file_data) {
+      const error = new Error("No attachment available for this placement opening");
+      error.status = 404;
+      throw error;
+    }
+
+    res.setHeader("Content-Type", "application/octet-stream");
+    res.setHeader("Content-Disposition", `inline; filename="${rows[0].file_name}"`);
+    res.send(rows[0].file_data);
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   getStudentDetails,
   getStudentCourses,
@@ -1905,5 +2027,7 @@ module.exports = {
   uploadResume,
   getStudentResumes,
   deleteResume,
-  downloadResume
+  downloadResume,
+  downloadInternshipOpeningAttachment,
+  downloadPlacementOpeningAttachment
 };

@@ -128,12 +128,56 @@ class API {
     return this.call("POST", "/student/internships/apply", { openingId, resumeId });
   }
 
+  static async downloadInternshipOpeningAttachment(openingId) {
+    const token = localStorage.getItem("auth_token");
+    const response = await fetch(`${API_BASE_URL}/student/internships/openings/${openingId}/attachment`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      let errorMessage = "Failed to fetch internship attachment";
+      try {
+        const json = await response.json();
+        errorMessage = json.message || errorMessage;
+      } catch (_) {
+        // Keep fallback message for non-JSON responses.
+      }
+      throw new Error(errorMessage);
+    }
+
+    return response.blob();
+  }
+
   static async getPlacements() {
     return this.call("GET", "/student/placements");
   }
 
   static async applyPlacement(openingId, resumeId) {
     return this.call("POST", "/student/placements/apply", { openingId, resumeId });
+  }
+
+  static async downloadPlacementOpeningAttachment(openingId) {
+    const token = localStorage.getItem("auth_token");
+    const response = await fetch(`${API_BASE_URL}/student/placements/openings/${openingId}/attachment`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      let errorMessage = "Failed to fetch placement attachment";
+      try {
+        const json = await response.json();
+        errorMessage = json.message || errorMessage;
+      } catch (_) {
+        // Keep fallback message for non-JSON responses.
+      }
+      throw new Error(errorMessage);
+    }
+
+    return response.blob();
   }
 
   static async getTimetable() {
@@ -276,6 +320,10 @@ class API {
     return this.call("PUT", `/faculty/cdc/internships/openings/${openingId}`, payload);
   }
 
+  static async deleteCdcInternshipOpening(openingId) {
+    return this.call("DELETE", `/faculty/cdc/internships/openings/${openingId}`);
+  }
+
   static async decideCdcInternshipApplication(internshipId, action) {
     return this.call("POST", `/faculty/cdc/internships/applications/${internshipId}/decision`, { action });
   }
@@ -290,6 +338,10 @@ class API {
 
   static async updateCdcPlacementOpening(openingId, payload) {
     return this.call("PUT", `/faculty/cdc/placements/openings/${openingId}`, payload);
+  }
+
+  static async deleteCdcPlacementOpening(openingId) {
+    return this.call("DELETE", `/faculty/cdc/placements/openings/${openingId}`);
   }
 
   static async decideCdcPlacementApplication(placementId, action) {
@@ -316,6 +368,10 @@ class API {
     return this.call("PUT", `/faculty/tt/courses/${timetableId}`, payload);
   }
 
+  static async deletePicTtCourseTimetable(timetableId) {
+    return this.call("DELETE", `/faculty/tt/courses/${timetableId}`);
+  }
+
   static async getPicTtExamTimetable() {
     return this.call("GET", "/faculty/tt/exams");
   }
@@ -326,6 +382,10 @@ class API {
 
   static async updatePicTtExamTimetable(examId, payload) {
     return this.call("PUT", `/faculty/tt/exams/${examId}`, payload);
+  }
+
+  static async deletePicTtExamTimetable(examId) {
+    return this.call("DELETE", `/faculty/tt/exams/${examId}`);
   }
 
   static async getHodCourseManagement() {

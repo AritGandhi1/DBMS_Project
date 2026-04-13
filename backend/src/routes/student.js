@@ -25,7 +25,9 @@ const {
 	uploadResume,
 	getStudentResumes,
 	deleteResume,
-	downloadResume
+	downloadResume,
+	downloadInternshipOpeningAttachment,
+	downloadPlacementOpeningAttachment
 } = require("../controllers/studentController");
 
 const router = express.Router();
@@ -41,8 +43,10 @@ router.get("/results", authenticate, getStudentResults);
 router.get("/attendance", authenticate, getStudentAttendance);
 router.get("/exams", authenticate, getStudentExams);
 router.get("/internships", authenticate, getStudentInternships);
+router.get("/internships/openings/:openingId/attachment", authenticate, downloadInternshipOpeningAttachment);
 router.post("/internships/apply", authenticate, applyInternship);
 router.get("/placements", authenticate, getStudentPlacements);
+router.get("/placements/openings/:openingId/attachment", authenticate, downloadPlacementOpeningAttachment);
 router.post("/placements/apply", authenticate, applyPlacement);
 router.get("/timetable", authenticate, getStudentTimetable);
 router.get("/notifications", authenticate, getStudentNotifications);

@@ -137,7 +137,10 @@ const TTCoursePage = {
                       </select>
                     </td>
                     <td>
-                      <button class="btn btn-primary" data-tt-update-id="${s.timetableId}">Update</button>
+                      <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%;">
+                        <button class="btn btn-primary" data-tt-update-id="${s.timetableId}">Update</button>
+                        <button class="btn btn-danger" data-tt-delete-id="${s.timetableId}">Delete</button>
+                      </div>
                     </td>
                   </tr>
                 `).join("")}
@@ -162,6 +165,23 @@ const TTCoursePage = {
                 roomId: roomEl?.value?.trim()
               });
               setMessage("success", "Course timetable updated.");
+              await load();
+            } catch (error) {
+              setMessage("error", error.message);
+            }
+          });
+        });
+
+        tableEl.querySelectorAll("button[data-tt-delete-id]").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const timetableId = Number(btn.dataset.ttDeleteId);
+            if (!window.confirm(`Delete timetable entry ${timetableId}?`)) {
+              return;
+            }
+
+            try {
+              await API.deletePicTtCourseTimetable(timetableId);
+              setMessage("success", "Course timetable entry deleted.");
               await load();
             } catch (error) {
               setMessage("error", error.message);

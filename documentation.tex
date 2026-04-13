@@ -1,0 +1,544 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{xurl}
+\usepackage{listings}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue,
+  urlcolor=blue,
+  pdftitle={DBMS Academic Portal Documentation},
+  pdfauthor={Shashank},
+  pdfsubject={Database design, API reference, and project structure}
+}
+
+\lstdefinestyle{tree}{
+  basicstyle=\ttfamily\small,
+  columns=fullflexible,
+  breaklines=true,
+  frame=single,
+  showstringspaces=false
+}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.5em}
+\renewcommand{\arraystretch}{1.2}
+\newcommand{\code}[1]{\path{#1}}
+
+\title{DBMS Academic Portal Documentation}
+\author{Shashank M.N. \\ 23CS02010 \\ Jayaditya Sahu \\ 23CS01025 \\ Arit Sharad Gandhi \\ 23CS01006}
+\date{13 April 2026}
+
+\begin{document}
+
+\begin{titlepage}
+\centering
+{\LARGE\bfseries DBMS Academic Portal Documentation\par}
+\vspace{2.5cm}
+{\large
+Shashank M.N. \par
+23CS02010 \par
+\vspace{0.8cm}
+Jayaditya Sahu \par
+23CS01025 \par
+\vspace{0.8cm}
+Arit Sharad Gandhi \par
+23CS01006 \par}
+\vfill
+{\large 13 April 2026\par}
+\end{titlepage}
+\clearpage
+\tableofcontents
+\newpage
+
+\section{Overview}
+
+The DBMS Academic Portal is a role-based university management system that supports students, faculty members, administrators, training and placement activities, timetable management, attendance, exams, leave applications, feedback, resumes, internships, placements, and academic records.
+
+The backend exposes REST APIs under the base path \code{/api}. The database is designed around the main academic entities: \code{STUDENT}, \code{FACULTY}, \code{COURSE}, and \code{COURSE_OFFERING}, with supporting tables for registrations, marks, attendance, notifications, documents, and career services.
+
+\section{Database Schema}
+
+\subsection{Core design idea}
+
+The schema separates master data from transactional data:
+
+\begin{itemize}[leftmargin=*]
+  \item Master entities: students, faculty, courses, rooms, and openings.
+  \item Transactional entities: enrollment, marks, attendance, exams, leave applications, feedback, TA applications, internship applications, placement applications, and transcripts.
+  \item Bridge tables for many-to-many relations: \code{PREREQUISITE}, \code{INTERNSHIP_BRANCH}, and \code{PLACEMENT_BRANCH}.
+  \item Configuration table: \code{APP_SETTINGS} for feature flags such as feedback and enrollment availability.
+\end{itemize}
+
+\subsection{Table summary}
+
+\small
+\begin{longtable}{p{3cm} p{2.6cm} p{4.2cm} p{4.8cm}}
+\toprule
+\textbf{Table} & \textbf{Primary key} & \textbf{Key relations} & \textbf{Purpose} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Table} & \textbf{Primary key} & \textbf{Key relations} & \textbf{Purpose} \\
+\midrule
+\endhead
+
+\code{ADMIN} & \code{admin_id} & Standalone account table & Stores administrator credentials. \\
+\code{APP_SETTINGS} & \code{setting_key} & Standalone key-value table & Stores feature flags such as feedback and enrollment status. \\
+\code{FACULTY} & \code{faculty_id} & Referenced by \code{STUDENT}, \code{COURSE_OFFERING}, \code{TA_ASSIGNMENT}, \code{NOTIFICATION} & Stores faculty identity, role, and contact details. \\
+\code{STUDENT} & \code{student_id} & References \code{FACULTY} through \code{advisor_id} & Stores student profile and academic status. \\
+\code{DOCUMENT} & \code{document_id} & References \code{STUDENT} & Stores student documents and attachments. \\
+\code{STUDENT_RESUME} & \code{resume_id} & References \code{STUDENT} & Stores resume files for applications. \\
+\code{COURSE} & \code{course_id} & Referenced by \code{COURSE_OFFERING}, \code{PREREQUISITE}, \code{ACADEMIC_TRANSCRIPT} & Stores course master data. \\
+\code{COURSE_OFFERING} & \code{offering_id} & References \code{COURSE} and \code{FACULTY} & Stores term-specific course delivery information. \\
+\code{ENROLLMENT} & \code{enrollment_id} & References \code{STUDENT} and \code{COURSE_OFFERING} & Stores student course registrations. \\
+\code{MARKS} & composite: \code{student_id + offering_id} & References \code{STUDENT} and \code{COURSE_OFFERING} & Stores marks for each enrolled student. \\
+\code{ATTENDANCE} & \code{attendance_id} & References \code{STUDENT} and \code{COURSE_OFFERING} & Stores attendance counts per course offering. \\
+\code{EXAM} & \code{exam_id} & References \code{COURSE_OFFERING} & Stores exam schedule information. \\
+\code{LEAVE_APPLICATION} & \code{leave_id} & References \code{STUDENT} & Stores leave requests and approval status. \\
+\code{FEEDBACK} & \code{feedback_id} & References \code{STUDENT} and \code{COURSE_OFFERING} & Stores course feedback and ratings. \\
+\code{TA_ASSIGNMENT} & \code{ta_id} & References \code{STUDENT}, \code{FACULTY}, \code{COURSE_OFFERING}, \code{STUDENT_RESUME} & Stores TA applications and decisions. \\
+\code{ROOM} & \code{room_id} & Referenced by \code{TIMETABLE} & Stores room details. \\
+\code{TIMETABLE} & \code{timetable_id} & References \code{COURSE_OFFERING} and \code{ROOM} & Stores class schedule information. \\
+\code{PREREQUISITE} & composite: \code{course_id + prereq_course_id} & Self-referential on \code{COURSE} & Stores course prerequisite pairs. \\
+\code{NOTIFICATION} & \code{notification_id} & Uses \code{id} and \code{sent_by} as routing fields & Stores messages sent to students, faculty, or courses. \\
+\code{INTERNSHIP_OPENING} & \code{opening_id} & Referenced by \code{INTERNSHIP} and \code{INTERNSHIP_BRANCH} & Stores internship vacancy details. \\
+\code{INTERNSHIP_BRANCH} & composite: \code{opening_id + branch} & References \code{INTERNSHIP_OPENING} & Maps openings to eligible branches. \\
+\code{PLACEMENT_OPENING} & \code{opening_id} & Referenced by \code{PLACEMENT} and \code{PLACEMENT_BRANCH} & Stores placement vacancy details. \\
+\code{PLACEMENT_BRANCH} & composite: \code{opening_id + branch} & References \code{PLACEMENT_OPENING} & Maps openings to eligible branches. \\
+\code{INTERNSHIP} & \code{internship_id} & References \code{STUDENT}, \code{INTERNSHIP_OPENING}, \code{STUDENT_RESUME} & Stores internship applications and outcomes. \\
+\code{PLACEMENT} & \code{placement_id} & References \code{STUDENT}, \code{PLACEMENT_OPENING}, \code{STUDENT_RESUME} & Stores placement applications and outcomes. \\
+\code{RESULT_HISTORY} & composite: \code{student_id + term_number} & References \code{STUDENT} & Stores term-wise SGPA and CGPA. \\
+\code{ACADEMIC_TRANSCRIPT} & \code{transcript_id} & References \code{STUDENT} and \code{COURSE} & Stores transcript-grade history for each term. \\
+
+\bottomrule
+\end{longtable}
+\normalsize
+
+\subsection{Relationship summary}
+
+\begin{itemize}[leftmargin=*]
+  \item One faculty member can advise many students, while each student has at most one advisor through \code{STUDENT.advisor_id}.
+  \item One course can have many offerings across different terms through \code{COURSE_OFFERING}.
+  \item One offering can have many enrollments, marks records, attendance records, exams, timetable rows, feedback entries, and TA applications.
+  \item The \code{PREREQUISITE} table implements a many-to-many self-relationship on \code{COURSE}.
+  \item \code{INTERNSHIP_BRANCH} and \code{PLACEMENT_BRANCH} implement many-to-many mappings between openings and eligible branches.
+  \item \code{TIMETABLE} connects course offerings with physical rooms and time slots.
+  \item \code{DOCUMENT} and \code{STUDENT_RESUME} hold uploaded binary data for student documents and resumes.
+\end{itemize}
+
+\section{Functional Dependencies and Table-wise Explanation}
+
+This section presents the major functional dependencies (FDs) used in design reasoning and a short explanation for each table. The notation \code{X -> Y} means attributes \code{X} functionally determine attributes \code{Y}.
+
+\small
+\begin{longtable}{p{3.1cm} p{5.7cm} p{5.2cm}}
+\toprule
+\textbf{Table} & \textbf{Main functional dependencies} & \textbf{Table explanation} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Table} & \textbf{Main functional dependencies} & \textbf{Table explanation} \\
+\midrule
+\endhead
+
+\code{ADMIN} & \code{admin_id -> username, password}; \code{username -> admin_id, password} & Stores administrator login records. \code{username} is unique, so both ID-based and username-based lookup are possible. \\
+
+\code{APP_SETTINGS} & \code{setting_key -> setting_value} & Stores configurable system flags in key-value form (for example, enrollment and feedback activation). \\
+
+\code{FACULTY} & \code{faculty_id -> password, role, name, email, phone, department}; \code{email -> faculty_id, ...} (when non-null) & Master table for faculty identity, access role, and department. Referenced by multiple academic and workflow tables. \\
+
+\code{STUDENT} & \code{student_id -> password, name, batch, college_email, personal_email, phone, dob, advisor_id, current_term_number, branch}; \code{college_email -> student_id, ...} (when non-null) & Master student profile table. Acts as parent for enrollment, marks, attendance, transcripts, leaves, and applications. \\
+
+\code{DOCUMENT} & \code{document_id -> student_id, doc_type, file_name, file_data} & Stores student-related documents as binary attachments. One student can have many document rows. \\
+
+\code{STUDENT_RESUME} & \code{resume_id -> student_id, file_name, file_data, file_size, uploaded_at, is_deleted} & Stores uploaded resumes used for TA, internship, and placement workflows. Soft-delete is tracked by \code{is_deleted}. \\
+
+\code{COURSE} & \code{course_id -> course_name, credits, branch} & Course master data for all departments. Referenced by offerings, prerequisites, and transcript entries. \\
+
+\code{COURSE_OFFERING} & \code{offering_id -> course_id, type, faculty_id, term_number, total_classes_conducted}; \code{(course_id, term_number) -> offering_id, type, faculty_id, total_classes_conducted} & Represents a course running in a specific term, taught by a faculty member. Central bridge between course master and all student transactions. \\
+
+\code{ENROLLMENT} & \code{enrollment_id -> student_id, offering_id, enrollment_date}; \code{(student_id, offering_id) -> enrollment_id, enrollment_date} & Registers students into offerings. Enforces one enrollment per student-offering pair. \\
+
+\code{MARKS} & \code{(student_id, offering_id) -> mid_sem, end_sem, internal, total, grade}; \code{mid_sem, end_sem, internal -> total} & Stores assessment components and final grade for each enrolled student in an offering. \code{total} is generated from component marks. \\
+
+\code{ATTENDANCE} & \code{attendance_id -> student_id, offering_id, classes_attended_count}; \code{(student_id, offering_id) -> attendance_id, classes_attended_count} & Stores per-student attendance counts for a specific offering. \\
+
+\code{EXAM} & \code{exam_id -> offering_id, exam_type, exam_date, exam_time, venue} & Stores exam scheduling for offerings (mid-sem, end-sem, supplementary). \\
+
+\code{LEAVE_APPLICATION} & \code{leave_id -> student_id, start_date, end_date, reason, status, applied_on} & Tracks leave requests submitted by students and their approval status. \\
+
+\code{FEEDBACK} & \code{feedback_id -> student_id, offering_id, rating, comment, submitted_on}; \code{(student_id, offering_id) -> feedback_id, rating, comment, submitted_on} & Stores one feedback submission per student per offering. \\
+
+\code{TA_ASSIGNMENT} & \code{ta_id -> student_id, faculty_id, term_number, offering_id, resume_id, role, status, applied_at}; \code{(student_id, faculty_id, term_number, offering_id) -> ta_id, resume_id, role, status, applied_at} & Captures TA applications and decisions for department/course/lab TA roles. \\
+
+\code{ROOM} & \code{room_id -> capacity, building} & Master room inventory used for timetable planning. \\
+
+\code{TIMETABLE} & \code{timetable_id -> offering_id, day, start_time, end_time, room_id} & Defines class schedule slots and assigned room for an offering. \\
+
+\code{PREREQUISITE} & \code{(course_id, prereq_course_id) -> (course_id, prereq_course_id)} & Bridge table that models many-to-many prerequisite relationships among courses. \\
+
+\code{NOTIFICATION} & \code{notification_id -> id, sent_by, message, created_at} & Stores notification messages with sender and recipient routing identifiers. \\
+
+\code{INTERNSHIP_OPENING} & \code{opening_id -> company, role, stipend, duration_months, file_name, file_data, file_size, is_active} & Master table for internship opportunities published by CDC. \\
+
+\code{INTERNSHIP_BRANCH} & \code{(opening_id, branch) -> (opening_id, branch)} & Bridge table mapping internship openings to eligible branches. \\
+
+\code{PLACEMENT_OPENING} & \code{opening_id -> company, role, ctc, file_name, file_data, file_size, is_active} & Master table for placement opportunities published by CDC. \\
+
+\code{PLACEMENT_BRANCH} & \code{(opening_id, branch) -> (opening_id, branch)} & Bridge table mapping placement openings to eligible branches. \\
+
+\code{INTERNSHIP} & \code{internship_id -> student_id, opening_id, resume_id, company, role, package, duration, status, applied_at, decision_at} & Stores student internship applications and outcomes, including snapshot details for history retention. \\
+
+\code{PLACEMENT} & \code{placement_id -> student_id, opening_id, resume_id, company, role, package, status, applied_at, decision_at} & Stores student placement applications and outcomes, with snapshot details for audit/history. \\
+
+\code{RESULT_HISTORY} & \code{(student_id, term_number) -> sgpa, cgpa} & Stores semester-wise GPA progression for each student. \\
+
+\code{ACADEMIC_TRANSCRIPT} & \code{transcript_id -> student_id, course_id, term_number, mid_sem, end_sem, internal, total, grade, recorded_date}; \code{(student_id, course_id, term_number) -> transcript_id, mid_sem, end_sem, internal, total, grade, recorded_date}; \code{mid_sem, end_sem, internal -> total} & Stores term-wise academic records used for transcript generation and historical reporting. \\
+
+\bottomrule
+\end{longtable}
+\normalsize
+
+\section{Normalization}
+
+The database is designed to follow the first three normal forms, and most core tables are also close to BCNF.
+
+\subsection{First Normal Form}
+
+The design satisfies 1NF because every attribute stores atomic values. Repeating groups are separated into their own tables:
+
+\begin{itemize}[leftmargin=*]
+  \item Branch eligibility for internships and placements is stored in \code{INTERNSHIP_BRANCH} and \code{PLACEMENT_BRANCH} instead of repeating branch values inside the opening tables.
+  \item Course prerequisites are stored in \code{PREREQUISITE} instead of being packed into a single column.
+  \item Marks, attendance, timetable, and enrollment are separated into distinct rows per student or offering.
+\end{itemize}
+
+\subsection{Second Normal Form}
+
+The bridge tables use composite keys where required, and every non-key attribute depends on the full key:
+
+\begin{itemize}[leftmargin=*]
+  \item \code{MARKS(student_id, offering_id)} stores grade-related attributes that depend on the student-offering pair.
+  \item \code{FEEDBACK(student_id, offering_id)} stores one feedback row per student per offering.
+  \item \code{PREREQUISITE(course_id, prereq_course_id)} stores one prerequisite pair at a time.
+  \item \code{RESULT_HISTORY(student_id, term_number)} stores exactly one result row per student per term.
+\end{itemize}
+
+\subsection{Third Normal Form}
+
+The schema reduces transitive dependency by keeping independent facts in separate tables:
+
+\begin{itemize}[leftmargin=*]
+  \item Student profile data is stored only in \code{STUDENT} and not repeated in enrollment, attendance, or marks tables.
+  \item Faculty profile data is stored only in \code{FACULTY} and referenced by foreign key.
+  \item Course master data is stored only in \code{COURSE}; term-specific teaching data is stored in \code{COURSE_OFFERING}.
+  \item Room details are stored only in \code{ROOM}; timetable rows reference the room instead of copying room attributes.
+\end{itemize}
+
+\subsection{BCNF-style design}
+
+Most tables are close to Boyce-Codd Normal Form because determinants are candidate keys or foreign keys. For example:
+
+\begin{itemize}[leftmargin=*]
+  \item \code{COURSE.course_id} determines course name, credits, and branch.
+  \item \code{FACULTY.faculty_id} determines faculty identity fields.
+  \item \code{COURSE_OFFERING.offering_id} determines the teaching assignment for that term.
+\end{itemize}
+
+\subsection{Controlled denormalization}
+
+A few tables intentionally keep redundant snapshot data for auditability and performance:
+
+\begin{itemize}[leftmargin=*]
+  \item \code{MARKS} stores assessment breakdown and grade for quick access.
+  \item \code{ACADEMIC_TRANSCRIPT} stores historical grade records independent of the live marks table.
+  \item \code{INTERNSHIP} and \code{PLACEMENT} store company, role, and package as application snapshots so that application history is preserved even if openings change later.
+  \item \code{NOTIFICATION} stores sender and recipient routing data so messages remain readable after the source entity changes.
+\end{itemize}
+
+\section{Redundancy Addressed}
+
+The schema removes avoidable duplication in the following ways:
+
+\begin{itemize}[leftmargin=*]
+  \item Course and faculty details are not copied into enrollment rows.
+  \item Course-offering details are not copied into transcript or feedback data.
+  \item Branch eligibility is normalized into bridge tables rather than repeated text lists.
+  \item Derived totals are generated where possible, for example the \code{total} column in \code{MARKS} and \code{ACADEMIC_TRANSCRIPT}.
+  \item The key-value table \code{APP_SETTINGS} prevents extra columns for every future system flag.
+\end{itemize}
+
+\section{REST APIs}
+
+All backend APIs are mounted under \code{/api}. Authentication is enforced through JWT middleware on protected routes.
+
+\subsection{Common endpoints}
+
+\begin{longtable}{p{3.2cm} p{4.2cm} p{2.2cm} p{5cm}}
+\toprule
+\textbf{Module} & \textbf{Endpoint} & \textbf{Method} & \textbf{Purpose} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Module} & \textbf{Endpoint} & \textbf{Method} & \textbf{Purpose} \\
+\midrule
+\endhead
+
+Root & \code{/api/} & GET & Health message for the backend root. \\
+Health & \code{/api/health} & GET & Returns uptime, status, and timestamp. \\
+Auth & \code{/api/auth/register} & POST & Registers a student account. \\
+Auth & \code{/api/auth/login} & POST & Logs in a student, faculty member, or admin. \\
+Auth & \code{/api/auth/me} & GET & Returns the authenticated user profile. \\
+
+\bottomrule
+\end{longtable}
+
+\subsection{Student APIs}
+
+\begin{longtable}{p{4cm} p{4cm} p{1.8cm} p{4.8cm}}
+\toprule
+\textbf{Endpoint} & \textbf{Description} & \textbf{Method} & \textbf{Access} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Endpoint} & \textbf{Description} & \textbf{Method} & \textbf{Access} \\
+\midrule
+\endhead
+
+\code{/api/student/me} & Returns student profile details. & GET & Student \\
+\code{/api/student/courses} & Returns enrolled courses. & GET & Student \\
+\code{/api/student/enrollment-options} & Returns course options available for enrollment. & GET & Student \\
+\code{/api/student/enroll} & Enrolls the student into a selected offering. & POST & Student \\
+\code{/api/student/ta-enrollment-options} & Returns TA application options. & GET & Student \\
+\code{/api/student/ta-enroll} & Submits a TA application. & POST & Student \\
+\code{/api/student/transcript} & Returns academic transcript records. & GET & Student \\
+\code{/api/student/results} & Returns semester SGPA and CGPA history. & GET & Student \\
+\code{/api/student/attendance} & Returns attendance summary. & GET & Student \\
+\code{/api/student/exams} & Returns exam schedule. & GET & Student \\
+\code{/api/student/internships} & Returns internship openings and applications. & GET & Student \\
+\code{/api/student/internships/openings/:openingId/attachment} & Downloads internship attachment file. & GET & Student \\
+\code{/api/student/internships/apply} & Applies for an internship opening. & POST & Student \\
+\code{/api/student/placements} & Returns placement openings and applications. & GET & Student \\
+\code{/api/student/placements/openings/:openingId/attachment} & Downloads placement attachment file. & GET & Student \\
+\code{/api/student/placements/apply} & Applies for a placement opening. & POST & Student \\
+\code{/api/student/timetable} & Returns class timetable. & GET & Student \\
+\code{/api/student/notifications} & Returns notifications addressed to the student. & GET & Student \\
+\code{/api/student/feedback/courses} & Returns courses open for feedback. & GET & Student \\
+\code{/api/student/feedback/submit} & Submits course feedback. & POST & Student \\
+\code{/api/student/leave-application/apply} & Submits a leave application. & POST & Student \\
+\code{/api/student/leave-application/past} & Returns previous leave applications. & GET & Student \\
+\code{/api/student/resume/upload} & Uploads a resume file. & POST & Student \\
+\code{/api/student/resume/list} & Lists uploaded resumes. & GET & Student \\
+\code{/api/student/resume/delete} & Marks or removes a resume. & POST & Student \\
+\code{/api/student/resume/download/:resumeId} & Downloads a resume file. & GET & Student \\
+
+\bottomrule
+\end{longtable}
+
+\subsection{Faculty APIs}
+
+\begin{longtable}{p{4cm} p{4cm} p{1.8cm} p{4.8cm}}
+\toprule
+\textbf{Endpoint} & \textbf{Description} & \textbf{Method} & \textbf{Access} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Endpoint} & \textbf{Description} & \textbf{Method} & \textbf{Access} \\
+\midrule
+\endhead
+
+\code{/api/faculty/dashboard} & Returns dashboard summary for a faculty user. & GET & Faculty \\
+\code{/api/faculty/courses} & Returns courses assigned to the faculty member. & GET & Faculty \\
+\code{/api/faculty/marks?offeringId=...} & Returns marks for one offering. & GET & Faculty \\
+\code{/api/faculty/marks/update} & Updates marks for a student in one offering. & POST & Faculty \\
+\code{/api/faculty/attendance?offeringId=...} & Returns attendance data for one offering. & GET & Faculty \\
+\code{/api/faculty/attendance/update} & Updates attendance for a student. & POST & Faculty \\
+\code{/api/faculty/attendance/mark-session} & Marks attendance for a whole class session. & POST & Faculty \\
+\code{/api/faculty/notifications} & Sends a notification. & POST & Faculty \\
+\code{/api/faculty/notifications} & Returns the faculty notification feed. & GET & Faculty \\
+\code{/api/faculty/ta-applications} & Lists TA applications. & GET & Faculty \\
+\code{/api/faculty/ta-applications/:taId/decision} & Accepts or rejects a TA application. & POST & Faculty \\
+\code{/api/faculty/ta-applications/:taId/resume} & Downloads the applicant resume. & GET & Faculty \\
+\code{/api/faculty/leave-applications} & Lists leave applications for review. & GET & Faculty \\
+\code{/api/faculty/leave-applications/:leaveId/decision} & Accepts or rejects a leave application. & POST & Faculty \\
+\code{/api/faculty/cdc/internships} & Manages internship openings and applications. & GET & PIC\_CDC \\
+\code{/api/faculty/cdc/internships/openings} & Creates an internship opening. & POST & PIC\_CDC \\
+\code{/api/faculty/cdc/internships/openings/:openingId} & Updates an internship opening. & PUT & PIC\_CDC \\
+\code{/api/faculty/cdc/internships/openings/:openingId} & Deletes an internship opening. & DELETE & PIC\_CDC \\
+\code{/api/faculty/cdc/internships/applications/:internshipId/decision} & Decides an internship application. & POST & PIC\_CDC \\
+\code{/api/faculty/cdc/placements} & Manages placement openings and applications. & GET & PIC\_CDC \\
+\code{/api/faculty/cdc/placements/openings} & Creates a placement opening. & POST & PIC\_CDC \\
+\code{/api/faculty/cdc/placements/openings/:openingId} & Updates a placement opening. & PUT & PIC\_CDC \\
+\code{/api/faculty/cdc/placements/openings/:openingId} & Deletes a placement opening. & DELETE & PIC\_CDC \\
+\code{/api/faculty/cdc/placements/applications/:placementId/decision} & Decides a placement application. & POST & PIC\_CDC \\
+\code{/api/faculty/tt/courses} & Returns timetable courses for PIC\_TT. & GET & PIC\_TT \\
+\code{/api/faculty/tt/rooms} & Returns available rooms. & GET & PIC\_TT \\
+\code{/api/faculty/tt/offerings} & Returns course offerings for timetable planning. & GET & PIC\_TT \\
+\code{/api/faculty/tt/courses} & Creates a timetable entry. & POST & PIC\_TT \\
+\code{/api/faculty/tt/courses/:timetableId} & Updates a timetable entry. & PUT & PIC\_TT \\
+\code{/api/faculty/tt/courses/:timetableId} & Deletes a timetable entry. & DELETE & PIC\_TT \\
+\code{/api/faculty/tt/exams} & Returns exam timetable entries. & GET & PIC\_TT \\
+\code{/api/faculty/tt/exams} & Creates an exam timetable entry. & POST & PIC\_TT \\
+\code{/api/faculty/tt/exams/:examId} & Updates an exam timetable entry. & PUT & PIC\_TT \\
+\code{/api/faculty/tt/exams/:examId} & Deletes an exam timetable entry. & DELETE & PIC\_TT \\
+\code{/api/faculty/hod/courses} & Returns department course management data. & GET & HOD \\
+\code{/api/faculty/hod/courses} & Creates a department course. & POST & HOD \\
+\code{/api/faculty/hod/courses/:courseId} & Updates a department course. & PUT & HOD \\
+\code{/api/faculty/hod/courses/:courseId} & Deletes a department course. & DELETE & HOD \\
+\code{/api/faculty/hod/course-offerings} & Creates a course offering. & POST & HOD \\
+\code{/api/faculty/hod/course-offerings/:offeringId} & Updates a course offering. & PUT & HOD \\
+\code{/api/faculty/hod/course-offerings/:offeringId} & Deletes a course offering. & DELETE & HOD \\
+\code{/api/faculty/hod/courses/:courseId/prerequisites} & Adds a prerequisite. & POST & HOD \\
+\code{/api/faculty/hod/courses/:courseId/prerequisites/:prereqCourseId} & Updates a prerequisite. & PUT & HOD \\
+\code{/api/faculty/hod/courses/:courseId/prerequisites/:prereqCourseId} & Deletes a prerequisite. & DELETE & HOD \\
+
+\bottomrule
+\end{longtable}
+
+\subsection{Admin APIs}
+
+\begin{longtable}{p{4cm} p{4cm} p{1.8cm} p{4.8cm}}
+\toprule
+\textbf{Endpoint} & \textbf{Description} & \textbf{Method} & \textbf{Access} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Endpoint} & \textbf{Description} & \textbf{Method} & \textbf{Access} \\
+\midrule
+\endhead
+
+\code{/api/admin/users} & Returns all student and faculty records. & GET & Admin \\
+\code{/api/admin/feedback-status} & Returns the feedback feature flag. & GET & Admin \\
+\code{/api/admin/feedback-status} & Updates the feedback feature flag. & PUT & Admin \\
+\code{/api/admin/enrollment-status} & Returns the enrollment feature flag. & GET & Admin \\
+\code{/api/admin/enrollment-status} & Updates the enrollment feature flag. & PUT & Admin \\
+\code{/api/admin/end-term} & Closes the term and processes end-of-term tasks. & POST & Admin \\
+\code{/api/admin/students} & Creates a student record. & POST & Admin \\
+\code{/api/admin/students/bulk-upload} & Bulk uploads students from CSV or Excel. & POST & Admin \\
+\code{/api/admin/students/:studentId} & Updates a student record. & PUT & Admin \\
+\code{/api/admin/faculty} & Creates a faculty record. & POST & Admin \\
+\code{/api/admin/faculty/bulk-upload} & Bulk uploads faculty records from CSV or Excel. & POST & Admin \\
+\code{/api/admin/faculty/:facultyId} & Updates a faculty record. & PUT & Admin \\
+\code{/api/admin/rooms} & Returns all room records. & GET & Admin \\
+\code{/api/admin/rooms} & Creates a room record. & POST & Admin \\
+\code{/api/admin/rooms/:roomId} & Updates a room record. & PUT & Admin \\
+\code{/api/admin/rooms/:roomId} & Deletes a room record. & DELETE & Admin \\
+
+\bottomrule
+\end{longtable}
+
+\section{Project Folder Structure}
+
+The repository contains three application areas: the Node.js backend, a Vite-based frontend, and a second browser-based frontend used for portal pages. The tree below reflects the visible structure in the workspace.
+
+\begin{lstlisting}[style=tree,caption={Repository folder structure}]
+DBMS_Project/
+|-- db1/
+|-- documentation.tex
+|-- Makefile
+|-- backend/
+|   |-- drop_all_tables.sql
+|   |-- package.json
+|   |-- schema.sql
+|   |-- src/
+|       |-- app.js
+|       |-- index.js
+|       |-- config/
+|       |   |-- db.js
+|       |   |-- env.js
+|       |-- controllers/
+|       |   |-- adminController.js
+|       |   |-- authController.js
+|       |   |-- facultyController.js
+|       |   |-- studentController.js
+|       |-- middlewares/
+|       |   |-- auth.js
+|       |   |-- errorHandler.js
+|       |   |-- notFound.js
+|       |-- routes/
+|       |   |-- admin.js
+|       |   |-- auth.js
+|       |   |-- faculty.js
+|       |   |-- health.js
+|       |   |-- index.js
+|       |   |-- student.js
+|       |-- services/
+|           |-- userStore.js
+|-- frontend/
+|   |-- index.html
+|   |-- package.json
+|   |-- public/
+|   |-- src/
+|       |-- main.js
+|       |-- style.css
+|-- frontend1/
+|   |-- index.html
+|   |-- package.json
+|   |-- assets/
+|   |   |-- images/
+|   |-- js/
+|   |   |-- api.js
+|   |   |-- auth.js
+|   |   |-- main.js
+|   |   |-- router.js
+|   |   |-- pages/
+|   |       |-- admin_rooms.js
+|   |       |-- admin_user_management.js
+|   |       |-- attendance.js
+|   |       |-- attendance_update.js
+|   |       |-- cdc_internships.js
+|   |       |-- cdc_placements.js
+|   |       |-- courses.js
+|   |       |-- dashboard.js
+|   |       |-- enrollment.js
+|   |       |-- exam.js
+|   |       |-- fa_leave.js
+|   |       |-- feedback.js
+|   |       |-- hod_courses.js
+|   |       |-- internships.js
+|   |       |-- leave_application.js
+|   |       |-- leave.js
+|   |       |-- login.js
+|   |       |-- marks_update.js
+|   |       |-- placements.js
+|   |       |-- register.js
+|   |       |-- result.js
+|   |       |-- send_notification.js
+|   |       |-- student_resume.js
+|   |       |-- ta_enrollment.js
+|   |       |-- timetable.js
+|   |       |-- transcript.js
+|   |       |-- tt_course.js
+|   |       |-- tt_exam.js
+|   |-- styles/
+|       |-- main.css
+\end{lstlisting}
+
+\section{Implementation Notes}
+
+\begin{itemize}[leftmargin=*]
+  \item The backend is an Express application with CORS, JSON parsing, and role-based route protection.
+  \item Authentication is handled with JWT tokens and middleware checks.
+  \item Binary uploads are supported for documents, resumes, internship attachments, and placement attachments.
+  \item Feature toggles in \code{APP_SETTINGS} allow the admin to enable or disable enrollment and feedback without changing code.
+  \item The frontend API layer in \code{frontend1/js/api.js} wraps all REST calls and is aligned with the backend route structure.
+\end{itemize}
+
+\section{Conclusion}
+
+The schema is normalized, modular, and suitable for a full academic portal. It separates master data from transactional records, reduces redundancy, supports historical tracking, and exposes a clear REST API surface for student, faculty, and admin workflows.
+
+\end{document}

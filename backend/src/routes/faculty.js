@@ -19,19 +19,23 @@ const {
 	getCdcInternshipManagement,
 	createCdcInternshipOpening,
 	updateCdcInternshipOpening,
+	deleteCdcInternshipOpening,
 	decideCdcInternshipApplication,
 	getCdcPlacementManagement,
 	createCdcPlacementOpening,
 	updateCdcPlacementOpening,
+	deleteCdcPlacementOpening,
 	decideCdcPlacementApplication,
 	getPicTtCourseTimetable,
 	getPicTtRooms,
 	getPicTtOfferings,
 	createPicTtCourseTimetable,
 	updatePicTtCourseTimetable,
+	deletePicTtCourseTimetable,
 	getPicTtExamTimetable,
 	createPicTtExamTimetable,
 	updatePicTtExamTimetable,
+	deletePicTtExamTimetable,
 	getHodCourseManagement,
 	createHodCourse,
 	updateHodCourse,
@@ -63,19 +67,23 @@ router.post("/leave-applications/:leaveId/decision", authenticate, decideFaculty
 router.get("/cdc/internships", authenticate, getCdcInternshipManagement);
 router.post("/cdc/internships/openings", authenticate, createCdcInternshipOpening);
 router.put("/cdc/internships/openings/:openingId", authenticate, updateCdcInternshipOpening);
+router.delete("/cdc/internships/openings/:openingId", authenticate, deleteCdcInternshipOpening);
 router.post("/cdc/internships/applications/:internshipId/decision", authenticate, decideCdcInternshipApplication);
 router.get("/cdc/placements", authenticate, getCdcPlacementManagement);
 router.post("/cdc/placements/openings", authenticate, createCdcPlacementOpening);
 router.put("/cdc/placements/openings/:openingId", authenticate, updateCdcPlacementOpening);
+router.delete("/cdc/placements/openings/:openingId", authenticate, deleteCdcPlacementOpening);
 router.post("/cdc/placements/applications/:placementId/decision", authenticate, decideCdcPlacementApplication);
 router.get("/tt/courses", authenticate, getPicTtCourseTimetable);
 router.get("/tt/rooms", authenticate, getPicTtRooms);
 router.get("/tt/offerings", authenticate, getPicTtOfferings);
 router.post("/tt/courses", authenticate, createPicTtCourseTimetable);
 router.put("/tt/courses/:timetableId", authenticate, updatePicTtCourseTimetable);
+router.delete("/tt/courses/:timetableId", authenticate, deletePicTtCourseTimetable);
 router.get("/tt/exams", authenticate, getPicTtExamTimetable);
 router.post("/tt/exams", authenticate, createPicTtExamTimetable);
 router.put("/tt/exams/:examId", authenticate, updatePicTtExamTimetable);
+router.delete("/tt/exams/:examId", authenticate, deletePicTtExamTimetable);
 router.get("/hod/courses", authenticate, getHodCourseManagement);
 router.post("/hod/courses", authenticate, createHodCourse);
 router.put("/hod/courses/:courseId", authenticate, updateHodCourse);

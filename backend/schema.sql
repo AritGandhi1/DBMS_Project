@@ -17,7 +17,7 @@ DROP TABLE IF EXISTS STUDENT_RESUME;
 DROP TABLE IF EXISTS PREREQUISITE;
 DROP TABLE IF EXISTS TIMETABLE;
 DROP TABLE IF EXISTS ROOM;
-DROP TABLE IF EXISTS CGPA;
+-- DROP TABLE IF EXISTS CGPA;
 DROP TABLE IF EXISTS FEEDBACK;
 DROP TABLE IF EXISTS ATTENDANCE;
 DROP TABLE IF EXISTS ENROLLMENT;
@@ -29,7 +29,8 @@ DROP TABLE IF EXISTS LEAVE_APPLICATION;
 DROP TABLE IF EXISTS TA_ASSIGNMENT;
 DROP TABLE IF EXISTS EXAM;
 DROP TABLE IF EXISTS DOCUMENT;
-DROP TABLE IF EXISTS PAYMENT;
+-- DROP TABLE IF EXISTS PAYMENT;
+DROP TABLE IF EXISTS APP_SETTINGS;
 DROP TABLE IF EXISTS STUDENT;
 DROP TABLE IF EXISTS FACULTY;
 DROP TABLE IF EXISTS ADMIN;
@@ -42,6 +43,14 @@ CREATE TABLE ADMIN (
     admin_id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
     password VARCHAR(100) NOT NULL
+);
+
+-- =========================================
+-- APP SETTINGS
+-- =========================================
+CREATE TABLE APP_SETTINGS (
+    setting_key VARCHAR(100) PRIMARY KEY,
+    setting_value VARCHAR(255) NOT NULL
 );
 
 -- =========================================
@@ -278,18 +287,6 @@ CREATE TABLE TA_ASSIGNMENT (
 );
 
 -- =========================================
--- CGPA
--- =========================================
-CREATE TABLE CGPA (
-    student_id VARCHAR(10) PRIMARY KEY,
-
-    cgpa DECIMAL(4,2) NOT NULL CHECK (cgpa BETWEEN 0 AND 10),
-
-    FOREIGN KEY (student_id) REFERENCES STUDENT(student_id)
-        ON DELETE CASCADE
-);
-
--- =========================================
 -- ROOM
 -- =========================================
 CREATE TABLE ROOM (
@@ -329,23 +326,6 @@ CREATE TABLE PREREQUISITE (
     FOREIGN KEY (course_id) REFERENCES COURSE(course_id)
         ON DELETE CASCADE,
     FOREIGN KEY (prereq_course_id) REFERENCES COURSE(course_id)
-        ON DELETE CASCADE
-);
-
--- =========================================
--- PAYMENT
--- =========================================
-CREATE TABLE PAYMENT (
-    payment_id INT AUTO_INCREMENT PRIMARY KEY,
-    student_id VARCHAR(10),
-    payment_type VARCHAR(10),
-    term_number INT,
-
-    amount DECIMAL(10,2),
-    payment_date DATE,
-    status ENUM('Paid','Pending'),
-
-    FOREIGN KEY (student_id) REFERENCES STUDENT(student_id)
         ON DELETE CASCADE
 );
 
@@ -498,6 +478,10 @@ CREATE TABLE ACADEMIC_TRANSCRIPT (
 INSERT INTO ADMIN (admin_id, username, password) VALUES
     (1, 'admin', 'admin123');
 
+INSERT INTO APP_SETTINGS (setting_key, setting_value) VALUES
+    ('feedback_active', '1'),
+    ('enrollment_active', '1');
+
 INSERT INTO FACULTY (faculty_id, password, role, name, email, phone, department) VALUES
     ('CS01', 'faculty123', 'Faculty', 'Dr. Meera Nair', 'meera.nair@university.edu', '9876543210', 'CSE'),
     ('CSHOD', 'faculty123', 'HOD', 'Dr. Neel Khanna', 'neel.khanna@university.edu', '9876543220', 'CSE'),
@@ -550,7 +534,7 @@ INSERT INTO DOCUMENT (document_id, student_id, doc_type, file_name, file_data) V
     (4, '23EC01', 'Bonafide Certificate', '23EC01-bonafide.pdf', NULL);
 
 INSERT INTO COURSE (course_id, course_name, branch, credits) VALUES
-    ('CS101', 'Database Systems', 'CSE', 4),
+    ('CS101', 'Database Systems', 'CSE', 3),
     ('CS102', 'Operating Systems', 'CSE', 4),
     ('CS103', 'Web Development', 'CSE', 3),
     ('CS104', 'Data Structures', 'CSE', 4),
@@ -652,11 +636,11 @@ INSERT INTO TA_ASSIGNMENT (ta_id, student_id, faculty_id, term_number, offering_
     (1, '23CS02', 'CS01', 2, 3, 'Lab TA', 'Accepted'),
     (2, '23IT01', 'IT01', 1, 6, 'Course TA', 'Accepted');
 
-INSERT INTO CGPA (student_id, cgpa) VALUES
-    ('23CS01', 8.75),
-    ('23CS02', 8.40),
-    ('23IT01', 8.10),
-    ('23EC01', 8.32);
+-- INSERT INTO CGPA (student_id, cgpa) VALUES
+--     ('23CS01', 8.75),
+--     ('23CS02', 8.40),
+--     ('23IT01', 8.10),
+--     ('23EC01', 8.32);
 
 INSERT INTO ROOM (room_id, capacity, building) VALUES
     ('R101', 60, 'Main Block'),
@@ -675,12 +659,6 @@ INSERT INTO PREREQUISITE (course_id, prereq_course_id) VALUES
     ('CS103', 'CS101'),
     ('CS106', 'CS105'),
     ('IT104', 'IT103');
-
-INSERT INTO PAYMENT (payment_id, student_id, payment_type, term_number, amount, payment_date, status) VALUES
-    (1, '23CS01', 'Tuition', 1, 45000.00, '2025-08-15', 'Paid'),
-    (2, '23CS02', 'Tuition', 2, 47000.00, '2026-01-15', 'Pending'),
-    (3, '23IT01', 'Tuition', 1, 46000.00, '2025-08-16', 'Paid'),
-    (4, '23EC01', 'Tuition', 2, 45500.00, '2026-01-16', 'Pending');
 
 INSERT INTO NOTIFICATION (notification_id, id, sent_by, message, created_at) VALUES
     (1, '23CS01', 'CS01', 'Mid-semester exam schedule published.', '2026-04-02 09:00:00'),
@@ -723,11 +701,11 @@ INSERT INTO PLACEMENT (placement_id, student_id, opening_id, company, role, pack
     (1, '23CS02', 1, 'CloudNova', 'Junior Developer', 640000.00, 'Accepted', '2026-02-01 10:00:00', '2026-03-10 10:00:00'),
     (2, '23EC01', 2, 'ChipCore', 'Embedded Engineer', 710000.00, 'Accepted', '2026-02-05 10:00:00', '2026-03-12 10:00:00');
 
-INSERT INTO RESULT_HISTORY (student_id, term_number, sgpa, cgpa) VALUES
-    ('23CS01', 1, 8.60, 8.60),
-    ('23CS02', 2, 8.90, 8.90),
-    ('23IT01', 1, 8.10, 8.10),
-    ('23EC01', 2, 8.32, 8.32);
+-- INSERT INTO RESULT_HISTORY (student_id, term_number, sgpa, cgpa) VALUES
+--     ('23CS01', 1, 8.60, 8.60),
+--     ('23CS02', 2, 8.90, 8.90),
+--     ('23IT01', 1, 8.10, 8.10),
+--     ('23EC01', 2, 8.32, 8.32);
 
 INSERT INTO ACADEMIC_TRANSCRIPT (
     transcript_id,

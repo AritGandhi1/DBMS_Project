@@ -92,7 +92,10 @@ const CDCInternshipsPage = {
           <input type="file" data-intern-field="file" data-intern-id="${opening.openingId}" />
         </td>
         <td>
-          <button class="btn btn-primary" data-intern-update="${opening.openingId}">Update</button>
+          <div class="cdc-row-actions">
+            <button class="btn btn-primary" data-intern-update="${opening.openingId}">Update</button>
+            <button class="btn btn-danger" data-intern-delete="${opening.openingId}">Delete</button>
+          </div>
         </td>
       </tr>
     `;
@@ -105,42 +108,46 @@ const CDCInternshipsPage = {
 
         openingsEl.innerHTML = openings.length
           ? `
-            <table>
-              <thead>
-                <tr><th>Opening ID</th><th>Company</th><th>Role</th><th>Stipend</th><th>Duration</th><th>Active</th><th>Attachment</th><th>Actions</th></tr>
-              </thead>
-              <tbody>
-                ${openings.map((opening) => buildOpeningRow(opening)).join("")}
-              </tbody>
-            </table>
+            <div class="table-wrap">
+              <table class="cdc-openings-table">
+                <thead>
+                  <tr><th>Opening ID</th><th>Company</th><th>Role</th><th>Stipend</th><th>Duration</th><th>Active</th><th>Attachment</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                  ${openings.map((opening) => buildOpeningRow(opening)).join("")}
+                </tbody>
+              </table>
+            </div>
           `
           : '<div class="message info">No internship openings yet.</div>';
 
         applicationsEl.innerHTML = applications.length
           ? `
-            <table>
-              <thead>
-                <tr><th>ID</th><th>Student</th><th>Name</th><th>Company</th><th>Role</th><th>Status</th><th>Actions</th></tr>
-              </thead>
-              <tbody>
-                ${applications.map((a) => `
-                  <tr>
-                    <td>${a.internshipId}</td>
-                    <td>${a.studentId}</td>
-                    <td>${a.studentName}</td>
-                    <td>${a.company}</td>
-                    <td>${a.role}</td>
-                    <td>${a.status}</td>
-                    <td>
-                      ${a.status === "Applied" ? `
-                        <button class="btn btn-primary" data-intern-action="accept" data-intern-id="${a.internshipId}" style="margin-right:8px;">Accept</button>
-                        <button class="btn btn-danger" data-intern-action="reject" data-intern-id="${a.internshipId}">Reject</button>
-                      ` : '-'}
-                    </td>
-                  </tr>
-                `).join("")}
-              </tbody>
-            </table>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr><th>ID</th><th>Student</th><th>Name</th><th>Company</th><th>Role</th><th>Status</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                  ${applications.map((a) => `
+                    <tr>
+                      <td>${a.internshipId}</td>
+                      <td>${a.studentId}</td>
+                      <td>${a.studentName}</td>
+                      <td>${a.company}</td>
+                      <td>${a.role}</td>
+                      <td>${a.status}</td>
+                      <td>
+                        ${a.status === "Applied" ? `
+                          <button class="btn btn-primary" data-intern-action="accept" data-intern-id="${a.internshipId}" style="margin-right:8px;">Accept</button>
+                          <button class="btn btn-danger" data-intern-action="reject" data-intern-id="${a.internshipId}">Reject</button>
+                        ` : '-'}
+                      </td>
+                    </tr>
+                  `).join("")}
+                </tbody>
+              </table>
+            </div>
           `
           : '<div class="message info">No applications yet.</div>';
 
@@ -165,6 +172,23 @@ const CDCInternshipsPage = {
                 ...(filePayload || {})
               });
               setMessage("success", `Internship opening ${openingId} updated.`);
+              await load();
+            } catch (error) {
+              setMessage("error", error.message);
+            }
+          });
+        });
+
+        openingsEl.querySelectorAll("button[data-intern-delete]").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const openingId = Number(btn.dataset.internDelete);
+            if (!window.confirm(`Delete internship opening ${openingId}?`)) {
+              return;
+            }
+
+            try {
+              await API.deleteCdcInternshipOpening(openingId);
+              setMessage("success", `Internship opening ${openingId} deleted.`);
               await load();
             } catch (error) {
               setMessage("error", error.message);

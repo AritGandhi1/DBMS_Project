@@ -32,6 +32,7 @@ const TAEnrollmentPage = {
         }
 
         tableEl.innerHTML = `
+          <div class="table-wrap">
           <table>
             <thead>
               <tr>
@@ -60,10 +61,14 @@ const TAEnrollmentPage = {
                       <td>${app.role}</td>
                       <td>${app.status}</td>
                       <td>
-                        ${app.resumeId ? `<button class="btn btn-secondary" data-ta-resume-id="${app.taId}" style="margin-right:8px;">View Resume</button>` : ""}
-                        ${app.status === 'Pending' ? `
-                          <button class="btn btn-primary" data-ta-action="accept" data-ta-id="${app.taId}" style="margin-right:8px;">Accept</button>
-                          <button class="btn btn-danger" data-ta-action="reject" data-ta-id="${app.taId}">Reject</button>
+                        ${app.status === 'Pending' || app.resumeId ? `
+                          <div class="ta-action-group">
+                            ${app.resumeId ? `<button class="btn btn-secondary" data-ta-resume-id="${app.taId}">View Resume</button>` : ""}
+                            ${app.status === 'Pending' ? `
+                              <button class="btn btn-primary" data-ta-action="accept" data-ta-id="${app.taId}">Accept</button>
+                              <button class="btn btn-danger" data-ta-action="reject" data-ta-id="${app.taId}">Reject</button>
+                            ` : ""}
+                          </div>
                         ` : '-'}
                       </td>
                     </tr>
@@ -72,6 +77,7 @@ const TAEnrollmentPage = {
                 .join("")}
             </tbody>
           </table>
+          </div>
         `;
 
         tableEl.querySelectorAll("button[data-ta-action]").forEach((button) => {

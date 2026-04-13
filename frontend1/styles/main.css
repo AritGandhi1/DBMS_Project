@@ -525,6 +525,37 @@ table {
   border-collapse: collapse;
 }
 
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-wrap table {
+  min-width: 720px;
+}
+
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.result-title {
+  margin-bottom: 0;
+}
+
+.result-download-btn {
+  min-width: 190px;
+}
+
+#resultPrintMessage {
+  margin-top: 14px;
+}
+
 thead {
   background: #f5f5f5;
 }
@@ -1269,6 +1300,66 @@ tbody tr:hover {
   padding: 9px 10px;
 }
 
+/* CDC openings tables */
+.cdc-openings-table td {
+  vertical-align: top;
+}
+
+.cdc-openings-table {
+  min-width: 980px;
+}
+
+.cdc-openings-table td input,
+.cdc-openings-table td select {
+  width: 100%;
+  min-width: 120px;
+}
+
+.cdc-openings-table td input[type="file"] {
+  min-width: 180px;
+}
+
+.cdc-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.cdc-row-actions .btn {
+  width: auto;
+  min-width: 0;
+  padding: 7px 10px;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.cdc-openings-table th:last-child,
+.cdc-openings-table td:last-child {
+  min-width: 170px;
+}
+
+.ta-action-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.ta-action-group .btn {
+  width: auto;
+  min-width: 0;
+  padding: 7px 10px;
+  white-space: nowrap;
+}
+
+#taApplicationsTable th:last-child,
+#taApplicationsTable td:last-child {
+  min-width: 250px;
+}
+
 @media (max-width: 1100px) {
   .admin-users-form-grid {
     grid-template-columns: 1fr;
@@ -1302,6 +1393,15 @@ tbody tr:hover {
     min-width: 88px;
     padding: 8px;
   }
+
+  .cdc-openings-table td input,
+  .cdc-openings-table td select {
+    min-width: 100px;
+  }
+
+  .cdc-openings-table td input[type="file"] {
+    min-width: 150px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1321,6 +1421,24 @@ tbody tr:hover {
   .admin-users-table-wrap td select {
     min-width: 76px;
     padding: 7px;
+  }
+
+  .cdc-row-actions {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: nowrap;
+  }
+
+  .cdc-row-actions .btn {
+    width: auto;
+    min-width: 0;
+    padding: 6px 9px;
+    font-size: 12px;
+  }
+
+  .ta-action-group .btn {
+    padding: 6px 9px;
+    font-size: 12px;
   }
 }
 

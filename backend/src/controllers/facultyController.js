@@ -219,7 +219,6 @@ async function getFacultyCurrentCourses(req, res, next) {
     ensureFacultyRole(req);
 
     const facultyId = String(req.user.id || "").trim();
-    const currentTermNumber = await getCurrentTermForFaculty(facultyId);
 
     const [courseRows] = await pool.execute(
       `SELECT
@@ -230,14 +229,12 @@ async function getFacultyCurrentCourses(req, res, next) {
        FROM COURSE_OFFERING co
        JOIN COURSE c ON c.course_id = co.course_id
        WHERE co.faculty_id = ?
-         AND co.term_number = ?
-       ORDER BY c.course_id`,
-      [facultyId, currentTermNumber]
+       ORDER BY co.term_number DESC, c.course_id`,
+      [facultyId]
     );
 
     res.status(200).json({
       message: "Faculty courses retrieved",
-      currentTermNumber,
       courses: courseRows.map((row) => ({
         offeringId: row.offering_id,
         termNumber: row.term_number,
@@ -1327,6 +1324,50 @@ async function updateCdcInternshipOpening(req, res, next) {
   }
 }
 
+async function deleteCdcInternshipOpening(req, res, next) {
+  try {
+    ensurePicCdcRole(req);
+
+    const department = String(req.user.department || "").trim().toUpperCase();
+    const openingId = Number(req.params.openingId);
+
+    if (Number.isNaN(openingId)) {
+      const error = new Error("openingId must be numeric");
+      error.status = 400;
+      throw error;
+    }
+
+    const [existingRows] = await pool.execute(
+      `SELECT io.opening_id
+       FROM INTERNSHIP_OPENING io
+       JOIN INTERNSHIP_BRANCH ib ON ib.opening_id = io.opening_id
+       WHERE io.opening_id = ?
+         AND UPPER(ib.branch) = ?
+       LIMIT 1`,
+      [openingId, department]
+    );
+
+    if (!existingRows[0]) {
+      const error = new Error("Internship opening not found in your department");
+      error.status = 404;
+      throw error;
+    }
+
+    await pool.execute(
+      `DELETE FROM INTERNSHIP_OPENING
+       WHERE opening_id = ?`,
+      [openingId]
+    );
+
+    res.status(200).json({
+      message: "Internship opening deleted",
+      openingId
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function decideCdcInternshipApplication(req, res, next) {
   try {
     ensurePicCdcRole(req);
@@ -1612,6 +1653,50 @@ async function updateCdcPlacementOpening(req, res, next) {
 
     res.status(200).json({
       message: "Placement opening updated",
+      openingId
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function deleteCdcPlacementOpening(req, res, next) {
+  try {
+    ensurePicCdcRole(req);
+
+    const department = String(req.user.department || "").trim().toUpperCase();
+    const openingId = Number(req.params.openingId);
+
+    if (Number.isNaN(openingId)) {
+      const error = new Error("openingId must be numeric");
+      error.status = 400;
+      throw error;
+    }
+
+    const [existingRows] = await pool.execute(
+      `SELECT po.opening_id
+       FROM PLACEMENT_OPENING po
+       JOIN PLACEMENT_BRANCH pb ON pb.opening_id = po.opening_id
+       WHERE po.opening_id = ?
+         AND UPPER(pb.branch) = ?
+       LIMIT 1`,
+      [openingId, department]
+    );
+
+    if (!existingRows[0]) {
+      const error = new Error("Placement opening not found in your department");
+      error.status = 404;
+      throw error;
+    }
+
+    await pool.execute(
+      `DELETE FROM PLACEMENT_OPENING
+       WHERE opening_id = ?`,
+      [openingId]
+    );
+
+    res.status(200).json({
+      message: "Placement opening deleted",
       openingId
     });
   } catch (error) {
@@ -1915,6 +2000,51 @@ async function updatePicTtCourseTimetable(req, res, next) {
   }
 }
 
+async function deletePicTtCourseTimetable(req, res, next) {
+  try {
+    ensurePicTtRole(req);
+
+    const department = String(req.user.department || "").trim().toUpperCase();
+    const timetableId = Number(req.params.timetableId);
+
+    if (Number.isNaN(timetableId)) {
+      const error = new Error("timetableId must be numeric");
+      error.status = 400;
+      throw error;
+    }
+
+    const [existingRows] = await pool.execute(
+      `SELECT t.timetable_id
+       FROM TIMETABLE t
+       JOIN COURSE_OFFERING co ON co.offering_id = t.offering_id
+       JOIN COURSE c ON c.course_id = co.course_id
+       WHERE t.timetable_id = ?
+         AND UPPER(c.branch) = ?
+       LIMIT 1`,
+      [timetableId, department]
+    );
+
+    if (!existingRows[0]) {
+      const error = new Error("Timetable entry not found for your department");
+      error.status = 404;
+      throw error;
+    }
+
+    await pool.execute(
+      `DELETE FROM TIMETABLE
+       WHERE timetable_id = ?`,
+      [timetableId]
+    );
+
+    res.status(200).json({
+      message: "Course timetable entry deleted",
+      timetableId
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function getPicTtExamTimetable(req, res, next) {
   try {
     ensurePicTtRole(req);
@@ -2074,6 +2204,51 @@ async function updatePicTtExamTimetable(req, res, next) {
 
     res.status(200).json({
       message: "Exam timetable entry updated",
+      examId
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function deletePicTtExamTimetable(req, res, next) {
+  try {
+    ensurePicTtRole(req);
+
+    const department = String(req.user.department || "").trim().toUpperCase();
+    const examId = Number(req.params.examId);
+
+    if (Number.isNaN(examId)) {
+      const error = new Error("examId must be numeric");
+      error.status = 400;
+      throw error;
+    }
+
+    const [existingRows] = await pool.execute(
+      `SELECT e.exam_id
+       FROM EXAM e
+       JOIN COURSE_OFFERING co ON co.offering_id = e.offering_id
+       JOIN COURSE c ON c.course_id = co.course_id
+       WHERE e.exam_id = ?
+         AND UPPER(c.branch) = ?
+       LIMIT 1`,
+      [examId, department]
+    );
+
+    if (!existingRows[0]) {
+      const error = new Error("Exam entry not found for your department");
+      error.status = 404;
+      throw error;
+    }
+
+    await pool.execute(
+      `DELETE FROM EXAM
+       WHERE exam_id = ?`,
+      [examId]
+    );
+
+    res.status(200).json({
+      message: "Exam timetable entry deleted",
       examId
     });
   } catch (error) {
@@ -2648,19 +2823,23 @@ module.exports = {
   getCdcInternshipManagement,
   createCdcInternshipOpening,
   updateCdcInternshipOpening,
+  deleteCdcInternshipOpening,
   decideCdcInternshipApplication,
   getCdcPlacementManagement,
   createCdcPlacementOpening,
   updateCdcPlacementOpening,
+  deleteCdcPlacementOpening,
   decideCdcPlacementApplication,
   getPicTtCourseTimetable,
   getPicTtRooms,
   getPicTtOfferings,
   createPicTtCourseTimetable,
   updatePicTtCourseTimetable,
+  deletePicTtCourseTimetable,
   getPicTtExamTimetable,
   createPicTtExamTimetable,
   updatePicTtExamTimetable,
+  deletePicTtExamTimetable,
   getHodCourseManagement,
   createHodCourse,
   updateHodCourse,

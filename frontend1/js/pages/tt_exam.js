@@ -104,7 +104,12 @@ const TTExamPage = {
                     <td><input data-exam-field="examDate" data-exam-id="${s.examId}" type="date" value="${String(s.examDate || "").slice(0, 10)}" /></td>
                     <td><input data-exam-field="examTime" data-exam-id="${s.examId}" type="time" value="${String(s.examTime || "").slice(0, 5)}" /></td>
                     <td><input data-exam-field="venue" data-exam-id="${s.examId}" value="${s.venue || ""}" /></td>
-                    <td><button class="btn btn-primary" data-exam-update-id="${s.examId}">Update</button></td>
+                    <td>
+                      <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%;">
+                        <button class="btn btn-primary" data-exam-update-id="${s.examId}">Update</button>
+                        <button class="btn btn-danger" data-exam-delete-id="${s.examId}">Delete</button>
+                      </div>
+                    </td>
                   </tr>
                 `).join("")}
               </tbody>
@@ -128,6 +133,23 @@ const TTExamPage = {
                 venue: venueEl?.value?.trim()
               });
               setMessage("success", "Exam timetable updated.");
+              await load();
+            } catch (error) {
+              setMessage("error", error.message);
+            }
+          });
+        });
+
+        tableEl.querySelectorAll("button[data-exam-delete-id]").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const examId = Number(btn.dataset.examDeleteId);
+            if (!window.confirm(`Delete exam entry ${examId}?`)) {
+              return;
+            }
+
+            try {
+              await API.deletePicTtExamTimetable(examId);
+              setMessage("success", "Exam timetable entry deleted.");
               await load();
             } catch (error) {
               setMessage("error", error.message);

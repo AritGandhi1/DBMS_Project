@@ -63,6 +63,7 @@ const InternshipsPage = {
             <th>Role</th>
             <th>Stipend</th>
             <th>Duration</th>
+            <th>Attachment</th>
             <th>Action</th>
           </tr>
         </thead>
@@ -80,6 +81,11 @@ const InternshipsPage = {
           <td>${opening.role}</td>
           <td>${opening.stipend}</td>
           <td>${opening.durationMonths} months</td>
+          <td>
+            ${opening.fileName
+              ? `<button class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;" onclick="InternshipsPage.viewAttachment('${opening.openingId}')">View File</button>`
+              : "-"}
+          </td>
           <td>
             <button class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;" ${isDisabled ? "disabled" : ""}
               onclick="InternshipsPage.apply('${opening.openingId}', '${opening.company}', '${opening.role}')">
@@ -217,6 +223,20 @@ const InternshipsPage = {
       setTimeout(() => {
         Router.navigate("#/internships");
       }, 800);
+    } catch (error) {
+      if (messageWrap) {
+        messageWrap.innerHTML = `<div class="message error">${error.message}</div>`;
+      }
+    }
+  },
+
+  async viewAttachment(openingId) {
+    const messageWrap = document.getElementById("internshipApplyMessage");
+    try {
+      const blob = await API.downloadInternshipOpeningAttachment(openingId);
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank", "noopener,noreferrer");
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
     } catch (error) {
       if (messageWrap) {
         messageWrap.innerHTML = `<div class="message error">${error.message}</div>`;

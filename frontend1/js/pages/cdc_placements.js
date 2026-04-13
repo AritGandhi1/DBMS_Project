@@ -87,7 +87,10 @@ const CDCPlacementsPage = {
           <input type="file" data-placement-field="file" data-placement-id="${opening.openingId}" />
         </td>
         <td>
-          <button class="btn btn-primary" data-placement-update="${opening.openingId}">Update</button>
+          <div class="cdc-row-actions">
+            <button class="btn btn-primary" data-placement-update="${opening.openingId}">Update</button>
+            <button class="btn btn-danger" data-placement-delete="${opening.openingId}">Delete</button>
+          </div>
         </td>
       </tr>
     `;
@@ -100,14 +103,16 @@ const CDCPlacementsPage = {
 
         openingsEl.innerHTML = openings.length
           ? `
-            <table>
-              <thead>
-                <tr><th>Opening ID</th><th>Company</th><th>Role</th><th>CTC</th><th>Active</th><th>Attachment</th><th>Actions</th></tr>
-              </thead>
-              <tbody>
-                ${openings.map((opening) => buildOpeningRow(opening)).join("")}
-              </tbody>
-            </table>
+            <div class="table-wrap">
+              <table class="cdc-openings-table">
+                <thead>
+                  <tr><th>Opening ID</th><th>Company</th><th>Role</th><th>CTC</th><th>Active</th><th>Attachment</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                  ${openings.map((opening) => buildOpeningRow(opening)).join("")}
+                </tbody>
+              </table>
+            </div>
           `
           : '<div class="message info">No placement openings yet.</div>';
 
@@ -158,6 +163,23 @@ const CDCPlacementsPage = {
                 ...(filePayload || {})
               });
               setMessage("success", `Placement opening ${openingId} updated.`);
+              await load();
+            } catch (error) {
+              setMessage("error", error.message);
+            }
+          });
+        });
+
+        openingsEl.querySelectorAll("button[data-placement-delete]").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const openingId = Number(btn.dataset.placementDelete);
+            if (!window.confirm(`Delete placement opening ${openingId}?`)) {
+              return;
+            }
+
+            try {
+              await API.deleteCdcPlacementOpening(openingId);
+              setMessage("success", `Placement opening ${openingId} deleted.`);
               await load();
             } catch (error) {
               setMessage("error", error.message);

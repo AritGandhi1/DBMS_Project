@@ -60,6 +60,7 @@ const PlacementsPage = {
             <th>Company</th>
             <th>Role</th>
             <th>CTC</th>
+            <th>Attachment</th>
             <th>Action</th>
           </tr>
         </thead>
@@ -76,6 +77,11 @@ const PlacementsPage = {
           <td>${opening.company}</td>
           <td>${opening.role}</td>
           <td>${opening.ctc}</td>
+          <td>
+            ${opening.fileName
+              ? `<button class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;" onclick="PlacementsPage.viewAttachment('${opening.openingId}')">View File</button>`
+              : "-"}
+          </td>
           <td>
             <button class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;" ${isDisabled ? "disabled" : ""}
               onclick="PlacementsPage.apply('${opening.openingId}', '${opening.company}', '${opening.role}')">
@@ -216,6 +222,20 @@ const PlacementsPage = {
       setTimeout(() => {
         Router.navigate("#/placements");
       }, 800);
+    } catch (error) {
+      if (messageWrap) {
+        messageWrap.innerHTML = `<div class="message error">${error.message}</div>`;
+      }
+    }
+  },
+
+  async viewAttachment(openingId) {
+    const messageWrap = document.getElementById("placementApplyMessage");
+    try {
+      const blob = await API.downloadPlacementOpeningAttachment(openingId);
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank", "noopener,noreferrer");
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
     } catch (error) {
       if (messageWrap) {
         messageWrap.innerHTML = `<div class="message error">${error.message}</div>`;
