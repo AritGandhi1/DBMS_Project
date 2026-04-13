@@ -1,8 +1,8 @@
 -- =========================================
 -- CREATE DATABASE
 -- =========================================
-CREATE DATABASE IF NOT EXISTS student_db;
-USE student_db;
+CREATE DATABASE IF NOT EXISTS ERP_sodearhang;
+USE ERP_sodearhang;
 
 SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS ACADEMIC_TRANSCRIPT;
