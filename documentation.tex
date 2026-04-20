@@ -54,9 +54,22 @@ Shashank M.N. \quad 23CS02010 \par
 Jayaditya Sahu \quad 23CS01025 \par
 \vspace{0.35cm}
 Arit Sharad Gandhi \quad 23CS01006 \par}
+\vspace{0.8cm}
+\begin{flushright}
+\large In the guidance of Dr. Sumana Maiti mam
+\end{flushright}
 \vspace{1.0cm}
 {\large 14 April 2026\par}
 \end{titlepage}
+
+\clearpage
+\section*{Acknowledgement}
+
+We would like to express our heartfelt gratitude to Dr. Sumana Maiti mam for her continuous guidance, insightful suggestions, and constant encouragement throughout the development of this DBMS Academic Portal project.
+
+Her support helped us strengthen both the design and implementation of the system, from understanding the core database concepts to organizing the project in a practical and structured manner.
+
+We are sincerely thankful for her valuable time, patience, and motivation, which played a major role in the successful completion of this work.
 
 \clearpage
 \tableofcontents
@@ -150,20 +163,20 @@ Notation used: \code{X -> Y} means \code{X} functionally determines \code{Y}.
 \midrule
 \endhead
 \code{ADMIN} & \code{admin_id -> username, password}; \code{username -> admin_id, password} & Admin login accounts. \\
-\code{APP_SETTINGS} & \code{setting_key -> setting_value} & Application feature flags. \\
+\code{APP_SETTINGS} & \code{setting_key -> setting_value} & Enrollment and feedback status (active / inactive). \\
 \code{FACULTY} & \code{faculty_id -> password, role, name, email, phone, department}; \code{email -> faculty_id, password, role, name, phone, department} & Faculty master data. \\
 \code{STUDENT} & \code{student_id -> password, name, batch, college_email, personal_email, phone, dob, advisor_id, current_term_number, branch}; \code{college_email -> student_id, password, name, batch, personal_email, phone, dob, advisor_id, current_term_number, branch} & Student master data. \\
-\code{DOCUMENT} & \code{document_id -> student_id, doc_type, file_name, file_data} & Student documents. \\
+\code{DOCUMENT} & \code{document_id -> student_id, doc_type, file_name, file_data} & Storing documents. \\
 \code{STUDENT_RESUME} & \code{resume_id -> student_id, file_name, file_data, file_size, uploaded_at, is_deleted} & Resume storage. \\
 \code{COURSE} & \code{course_id -> course_name, credits, branch} & Course catalog master table. \\
-\code{COURSE_OFFERING} & \code{offering_id -> course_id, type, faculty_id, term_number, total_classes_conducted}; \code{(course_id, term_number) -> offering_id, type, faculty_id, total_classes_conducted} & Term-wise course offerings. \\
+\code{COURSE_OFFERING} & \code{offering_id -> course_id, type, faculty_id, term_number, total_classes_conducted}; \code{(course_id, term_number) -> offering_id, type, faculty_id, total_classes_conducted} & Current course offerings. \\
 \code{ENROLLMENT} & \code{enrollment_id -> student_id, offering_id, enrollment_date}; \code{(student_id, offering_id) -> enrollment_id, enrollment_date} & Student registrations in offerings. \\
-\code{MARKS} & \code{(student_id, offering_id) -> mid_sem, end_sem, internal, total, grade}; \code{mid_sem, end_sem, internal -> total} & Marks for each student-offering pair. \\
+\code{MARKS} & \code{(student_id, offering_id) -> mid_sem, end_sem, internal, total, grade}; & Marks for each student-offering pair. \\
 \code{ATTENDANCE} & \code{attendance_id -> student_id, offering_id, classes_attended_count}; \code{(student_id, offering_id) -> attendance_id, classes_attended_count} & Attendance counts by student-offering. \\
-\code{EXAM} & \code{exam_id -> offering_id, exam_type, exam_date, exam_time, venue} & Exam schedule rows. \\
-\code{LEAVE_APPLICATION} & \code{leave_id -> student_id, start_date, end_date, reason, status, applied_on} & Student leave requests and decisions. \\
+\code{EXAM} & \code{exam_id -> offering_id, exam_type, exam_date, exam_time, venue} & Exam schedule. \\
+\code{LEAVE_APPLICATION} & \code{leave_id -> student_id, start_date, end_date, reason, status, applied_on} & Student leave requests and status. \\
 \code{FEEDBACK} & \code{feedback_id -> student_id, offering_id, rating, comment, submitted_on}; \code{(student_id, offering_id) -> feedback_id, rating, comment, submitted_on} & One feedback row per student per offering. \\
-\code{TA_ASSIGNMENT} & \code{ta_id -> student_id, faculty_id, term_number, offering_id, resume_id, role, status, applied_at}; \code{(student_id, faculty_id, term_number, offering_id) -> ta_id, resume_id, role, status, applied_at} & TA applications and decisions. \\
+\code{TA_ASSIGNMENT} & \code{ta_id -> student_id, faculty_id, term_number, offering_id, resume_id, role, status, applied_at}; \code{(student_id, faculty_id, term_number, offering_id) -> ta_id, resume_id, role, status, applied_at} & TA applications and status (for 7\textsuperscript{th} and 8\textsuperscript{th} sem). \\
 \code{ROOM} & \code{room_id -> capacity, building} & Room master data. \\
 \code{TIMETABLE} & \code{timetable_id -> offering_id, day, start_time, end_time, room_id} & Timetable slots for classes. \\
 \code{PREREQUISITE} & \code{(course_id, prereq_course_id) -> course_id, prereq_course_id} & Course prerequisite mapping. \\
@@ -172,10 +185,10 @@ Notation used: \code{X -> Y} means \code{X} functionally determines \code{Y}.
 \code{INTERNSHIP_BRANCH} & \code{(opening_id, branch) -> opening_id, branch} & Eligible branches per internship opening. \\
 \code{PLACEMENT_OPENING} & \code{opening_id -> company, role, ctc, file_name, file_data, file_size, is_active} & Placement opportunities. \\
 \code{PLACEMENT_BRANCH} & \code{(opening_id, branch) -> opening_id, branch} & Eligible branches per placement opening. \\
-\code{INTERNSHIP} & \code{internship_id -> student_id, opening_id, resume_id, company, role, package, duration, status, applied_at, decision_at} & Internship applications with snapshots. \\
-\code{PLACEMENT} & \code{placement_id -> student_id, opening_id, resume_id, company, role, package, status, applied_at, decision_at} & Placement applications with snapshots. \\
+\code{INTERNSHIP} & \code{internship_id -> student_id, opening_id, resume_id, company, role, package, duration, status, applied_at, decision_at} & Internship applications of students (for 5\textsuperscript{th} and 6\textsuperscript{th} sem). \\
+\code{PLACEMENT} & \code{placement_id -> student_id, opening_id, resume_id, company, role, package, status, applied_at, decision_at} & Placement applications of students (for 7\textsuperscript{th} and 8\textsuperscript{th} sem). \\
 \code{RESULT_HISTORY} & \code{(student_id, term_number) -> sgpa, cgpa} & Term-wise GPA history. \\
-\code{ACADEMIC_TRANSCRIPT} & \code{transcript_id -> student_id, course_id, term_number, mid_sem, end_sem, internal, total, grade, recorded_date}; \code{(student_id, course_id, term_number) -> transcript_id, mid_sem, end_sem, internal, total, grade, recorded_date}; \code{mid_sem, end_sem, internal -> total} & Historical transcript record. \\
+\code{ACADEMIC_TRANSCRIPT} & \code{transcript_id -> student_id, course_id, term_number, mid_sem, end_sem, internal, total, grade, recorded_date}; \code{(student_id, course_id, term_number) -> transcript_id, mid_sem, end_sem, internal, total, grade, recorded_date}; & Historical transcript record. \\
 \bottomrule
 \end{longtable}
 \normalsize
@@ -472,6 +485,15 @@ DBMS_Project/
   \item Binary attachments are stored in the database for documents, resumes, and opening attachments.
   \item \code{APP_SETTINGS} is used for runtime toggles like enrollment and feedback windows.
   \item Frontend API abstraction is in \code{frontend/js/api.js} and calls backend endpoints under \code{/api}.
+\end{itemize}
+
+\section{Contributions}
+
+\begin{itemize}[leftmargin=*]
+  \item All members contributed to designing the database schema and verifying the normalization.
+  \item Arit Sharad Gandhi developed the student APIs.
+  \item Shashank M.N. developed the faculty APIs.
+  \item Jayaditya Sahu developed the admin APIs and frontend implementation.
 \end{itemize}
 
 \section{Conclusion}

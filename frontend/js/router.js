@@ -3,6 +3,7 @@ const pages = [
   RegisterPage,
   DashboardPage,
   AdminUserManagementPage,
+  AdminFeedbackPage,
   AdminRoomsPage,
   CoursesPage,
   TimetablePage,
@@ -32,19 +33,42 @@ const pages = [
 let bgCarouselInterval = null;
 
 function bgCarouselInit() {
-  if (bgCarouselInterval) clearInterval(bgCarouselInterval); // clear old one
+  if (bgCarouselInterval) clearInterval(bgCarouselInterval);
   const track = document.getElementById('bgCarouselTrack');
   if (!track) return;
-  const slides = track.querySelectorAll('.bg-carousel-slide');
+  const slides = Array.from(track.querySelectorAll('.bg-carousel-slide'));
   if (!slides.length) return;
 
+  // Clone first slide to create a seamless one-step wrap from last to first.
+  const firstClone = slides[0].cloneNode(true);
+  firstClone.setAttribute('data-carousel-clone', 'true');
+  track.appendChild(firstClone);
+
+  const realSlideCount = slides.length;
   let current = 0;
-  const goTo = (index) => {
-    current = (index + slides.length) % slides.length;
+
+  const goTo = (index, animated = true) => {
+    track.style.transition = animated ? 'transform 1.2s ease-in-out' : 'none';
+    current = index;
     track.style.transform = `translateX(-${current * 100}%)`;
   };
 
-  bgCarouselInterval = setInterval(() => goTo(current + 1), 5000);
+  const handleTransitionEnd = () => {
+    if (current === realSlideCount) {
+      // Jump to actual first slide without animation after reaching clone.
+      goTo(0, false);
+      // Force style flush before next animated move.
+      void track.offsetWidth;
+      track.style.transition = 'transform 1.2s ease-in-out';
+    }
+  };
+
+  track.addEventListener('transitionend', handleTransitionEnd);
+  goTo(0, false);
+
+  bgCarouselInterval = setInterval(() => {
+    goTo(current + 1, true);
+  }, 5000);
 }
 
 const Router = {
@@ -173,7 +197,7 @@ const Router = {
           'student-resume'
         ],
         FACULTY: facultyRoutes,
-        ADMIN: ['dashboard', 'admin-users', 'admin-rooms', 'send-notification']
+        ADMIN: ['dashboard', 'admin-users', 'admin-feedback', 'admin-rooms', 'send-notification']
       };
 
       // Check authentication and redirect if needed
@@ -226,8 +250,8 @@ const Router = {
           this.loadNotifications();
         }
       } else {
-     app.innerHTML = this.renderBgCarousel() + '<div id="page-content"></div>';
-  bgCarouselInit();
+        app.innerHTML = this.renderBgCarousel() + '<div id="page-content"></div>';
+        bgCarouselInit();
       }
 
       // Render page
@@ -390,15 +414,17 @@ const Router = {
               <button class="mobile-menu-item ${activeClass('send-notification')}" onclick="Router.goToRoute('send-notification')">Send Notification</button>
     `;
 
-                    const adminNav = `
+    const adminNav = `
                       <a href="#/send-notification" class="nav-link ${activeClass('send-notification')}">Send Notification</a>
                       <a href="#/admin-users" class="nav-link ${activeClass('admin-users')}">User Management</a>
+                      <a href="#/admin-feedback" class="nav-link ${activeClass('admin-feedback')}">Student Feedback</a>
                       <a href="#/admin-rooms" class="nav-link ${activeClass('admin-rooms')}">Room Management</a>
                     `;
 
-                    const adminMobileNav = `
+    const adminMobileNav = `
                         <button class="mobile-menu-item ${activeClass('send-notification')}" onclick="Router.goToRoute('send-notification')">Send Notification</button>
                         <button class="mobile-menu-item ${activeClass('admin-users')}" onclick="Router.goToRoute('admin-users')">User Management</button>
+                      <button class="mobile-menu-item ${activeClass('admin-feedback')}" onclick="Router.goToRoute('admin-feedback')">Student Feedback</button>
                         <button class="mobile-menu-item ${activeClass('admin-rooms')}" onclick="Router.goToRoute('admin-rooms')">Room Management</button>
                     `;
 
@@ -422,7 +448,9 @@ const Router = {
     return `
       <div class="header">
         <div class="header-content">
-          <div><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRnJrGniI_xJjOVxV1uCMY5eyo9B0OhsJcFFg&s" alt="Logo" class="logo"></div>
+          <a href="#/dashboard" aria-label="Go to dashboard">
+            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRnJrGniI_xJjOVxV1uCMY5eyo9B0OhsJcFFg&s" alt="Logo" class="logo">
+          </a>
           <div class="nav">
             <a href="#/dashboard" class="nav-link ${activeClass('dashboard')}">Dashboard</a>
             ${isFaculty ? facultyNav : isAdmin ? adminNav : studentNav}
@@ -448,19 +476,26 @@ const Router = {
     `;
   },
 
-renderBgCarousel() {
-  return `
+  renderBgCarousel() {
+    return `
     <div class="bg-carousel">
       <div class="bg-carousel-track" id="bgCarouselTrack">
+        <div class="bg-carousel-slide" style="background-image: url('./assets/images/arial_view.png')"></div>
         <div class="bg-carousel-slide" style="background-image: url('./assets/images/brahmaputra-hall-of-residence-iit-campus.jpg')"></div>
         <div class="bg-carousel-slide" style="background-image: url('./assets/images/main-gate.jpg')"></div>
-        <div class="bg-carousel-slide" style="background-image: url('./assets/images/hostel.jpeg')"></div>
+        <div class="bg-carousel-slide" style="background-image: url('./assets/images/main_building.png')"></div>
+        <div class="bg-carousel-slide" style="background-image: url('./assets/images/acad.png')"></div>
+        <div class="bg-carousel-slide" style="background-image: url('./assets/images/bb.png')"></div>
+        <div class="bg-carousel-slide" style="background-image: url('./assets/images/bb2.png')"></div>
+        <div class="bg-carousel-slide" style="background-image: url('./assets/images/mhr.png')"></div>
+        <div class="bg-carousel-slide" style="background-image: url('./assets/images/resis.png')"></div>
+        <div class="bg-carousel-slide" style="background-image: url('./assets/images/road.png')"></div>
       </div>
       <div class="bg-carousel-overlay"></div>
     </div>
   `;
-}
-  
+  }
+
 };
 
 
@@ -479,23 +514,4 @@ document.addEventListener('click', (event) => {
   if (!wrap.contains(event.target)) {
     Router.closeNotifications();
   }
-},
-
-
-
-function bgCarouselInit() {
-  const track = document.getElementById('bgCarouselTrack');
-  if (!track) return;
-  const slides = track.querySelectorAll('.bg-carousel-slide');
-  if (!slides.length) return;
-
-  let current = 0;
-  const goTo = (index) => {
-    current = (index + slides.length) % slides.length;
-    track.style.transform = `translateX(-${current * 100}%)`;
-  };
-
-  setInterval(() => goTo(current + 1), 5000);
-}
-
-);
+});

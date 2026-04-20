@@ -1,0 +1,41 @@
+facultyId,password,role,name,email,phone,department
+CSFA1,pass1234,Faculty,CSE Faculty 1,csfa1@university.edu,9200000001,CSE
+CSFA2,pass1234,Faculty,CSE Faculty 2,csfa2@university.edu,9200000002,CSE
+CSFA3,pass1234,Faculty,CSE Faculty 3,csfa3@university.edu,9200000003,CSE
+CSFA4,pass1234,Faculty,CSE Faculty 4,csfa4@university.edu,9200000004,CSE
+ITFA1,pass1234,Faculty,IT Faculty 1,itfa1@university.edu,9200000011,IT
+ITFA2,pass1234,Faculty,IT Faculty 2,itfa2@university.edu,9200000012,IT
+ITFA3,pass1234,Faculty,IT Faculty 3,itfa3@university.edu,9200000013,IT
+ITFA4,pass1234,Faculty,IT Faculty 4,itfa4@university.edu,9200000014,IT
+ECFA1,pass1234,Faculty,ECE Faculty 1,ecfa1@university.edu,9200000021,ECE
+ECFA2,pass1234,Faculty,ECE Faculty 2,ecfa2@university.edu,9200000022,ECE
+ECFA3,pass1234,Faculty,ECE Faculty 3,ecfa3@university.edu,9200000023,ECE
+ECFA4,pass1234,Faculty,ECE Faculty 4,ecfa4@university.edu,9200000024,ECE
+MEFA1,pass1234,Faculty,ME Faculty 1,mefa1@university.edu,9200000031,ME
+MEFA2,pass1234,Faculty,ME Faculty 2,mefa2@university.edu,9200000032,ME
+MEFA3,pass1234,Faculty,ME Faculty 3,mefa3@university.edu,9200000033,ME
+MEFA4,pass1234,Faculty,ME Faculty 4,mefa4@university.edu,9200000034,ME
+CEFA1,pass1234,Faculty,CE Faculty 1,cefa1@university.edu,9200000041,CE
+CEFA2,pass1234,Faculty,CE Faculty 2,cefa2@university.edu,9200000042,CE
+CEFA3,pass1234,Faculty,CE Faculty 3,cefa3@university.edu,9200000043,CE
+CEFA4,pass1234,Faculty,CE Faculty 4,cefa4@university.edu,9200000044,CE
+CSHOD,pass1234,HOD,CSE HOD,cshod@university.edu,9210000001,CSE
+ITHOD,pass1234,HOD,IT HOD,ithod@university.edu,9210000002,IT
+ECHOD,pass1234,HOD,ECE HOD,echod@university.edu,9210000003,ECE
+MEHOD,pass1234,HOD,ME HOD,mehod@university.edu,9210000004,ME
+CEHOD,pass1234,HOD,CE HOD,cehod@university.edu,9210000005,CE
+CSTT1,pass1234,PIC_TT,CSE TT PIC,cstt1@university.edu,9220000001,CSE
+ITTT1,pass1234,PIC_TT,IT TT PIC,ittt1@university.edu,9220000002,IT
+ECTT1,pass1234,PIC_TT,ECE TT PIC,ectt1@university.edu,9220000003,ECE
+METT1,pass1234,PIC_TT,ME TT PIC,mett1@university.edu,9220000004,ME
+CETT1,pass1234,PIC_TT,CE TT PIC,cett1@university.edu,9220000005,CE
+CSCDC,pass1234,PIC_CDC,CSE CDC PIC,cscdc@university.edu,9230000001,CSE
+ITCDC,pass1234,PIC_CDC,IT CDC PIC,itcdc@university.edu,9230000002,IT
+ECCDC,pass1234,PIC_CDC,ECE CDC PIC,eccdc@university.edu,9230000003,ECE
+MECDC,pass1234,PIC_CDC,ME CDC PIC,mecdc@university.edu,9230000004,ME
+CECDC,pass1234,PIC_CDC,CE CDC PIC,cecdc@university.edu,9230000005,CE
+CSEX1,pass1234,PIC_EXAM,CSE Exam PIC,csex1@university.edu,9240000001,CSE
+ITEX1,pass1234,PIC_EXAM,IT Exam PIC,itex1@university.edu,9240000002,IT
+ECEX1,pass1234,PIC_EXAM,ECE Exam PIC,ecex1@university.edu,9240000003,ECE
+MEEX1,pass1234,PIC_EXAM,ME Exam PIC,meex1@university.edu,9240000004,ME
+CEEX1,pass1234,PIC_EXAM,CE Exam PIC,ceex1@university.edu,9240000005,CE

@@ -1,8 +1,8 @@
 -- =========================================
 -- CREATE DATABASE
 -- =========================================
-CREATE DATABASE IF NOT EXISTS ERP_sodearhang;
-USE ERP_sodearhang;
+CREATE DATABASE IF NOT EXISTS student_db;
+USE student_db;
 
 SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS ACADEMIC_TRANSCRIPT;
@@ -561,6 +561,28 @@ INSERT INTO COURSE (course_id, course_name, branch, credits) VALUES
     ('CE103', 'Transportation Engineering', 'CE', 4),
     ('CE104', 'Environmental Engineering', 'CE', 4);
 
+INSERT INTO COURSE (course_id, course_name, branch, credits) VALUES
+    ('CS201', 'Design and Analysis of Algorithms', 'CSE', 4),
+    ('CS202', 'Compiler Design', 'CSE', 4),
+    ('CS301', 'Distributed Systems', 'CSE', 4),
+    ('CS302', 'Information Retrieval', 'CSE', 3),
+    ('IT201', 'Enterprise Application Development', 'IT', 4),
+    ('IT202', 'Data Warehousing', 'IT', 3),
+    ('IT301', 'Advanced Cloud Platforms', 'IT', 4),
+    ('IT302', 'DevOps Engineering', 'IT', 3),
+    ('EC201', 'Signals and Systems', 'ECE', 4),
+    ('EC202', 'Communication Systems', 'ECE', 4),
+    ('EC301', 'Wireless Networks', 'ECE', 4),
+    ('EC302', 'Advanced Embedded Design', 'ECE', 3),
+    ('ME201', 'Strength of Materials', 'ME', 4),
+    ('ME202', 'Machine Design', 'ME', 4),
+    ('ME301', 'Automobile Engineering', 'ME', 4),
+    ('ME302', 'Industrial Engineering', 'ME', 3),
+    ('CE201', 'Concrete Technology', 'CE', 4),
+    ('CE202', 'Hydrology', 'CE', 4),
+    ('CE301', 'Advanced Structural Design', 'CE', 4),
+    ('CE302', 'Smart Infrastructure', 'CE', 3);
+
 INSERT INTO COURSE_OFFERING (offering_id, course_id, type, faculty_id, term_number, total_classes_conducted) VALUES
     (1, 'CS101', 'Core', 'CS01', 1, 8),
     (2, 'CS102', 'Core', 'IT01', 1, 7),
@@ -588,6 +610,28 @@ INSERT INTO COURSE_OFFERING (offering_id, course_id, type, faculty_id, term_numb
     (24, 'ME104', 'Core', 'ME01', 2, 7),
     (25, 'CE103', 'Core', 'CS01', 1, 8),
     (26, 'CE104', 'Core', 'IT01', 2, 9);
+
+INSERT INTO COURSE_OFFERING (offering_id, course_id, type, faculty_id, term_number, total_classes_conducted) VALUES
+    (27, 'CS201', 'Core', 'CS01', 4, 12),
+    (28, 'CS202', 'Core', 'IT01', 4, 11),
+    (29, 'CS301', 'Elective', 'CS01', 6, 10),
+    (30, 'CS302', 'Elective', 'IT01', 8, 9),
+    (31, 'IT201', 'Core', 'IT01', 4, 12),
+    (32, 'IT202', 'Core', 'CS01', 4, 11),
+    (33, 'IT301', 'Elective', 'IT01', 6, 10),
+    (34, 'IT302', 'Elective', 'CS01', 8, 9),
+    (35, 'EC201', 'Core', 'EC01', 4, 12),
+    (36, 'EC202', 'Core', 'EC01', 4, 11),
+    (37, 'EC301', 'Elective', 'EC01', 6, 10),
+    (38, 'EC302', 'Elective', 'EC01', 8, 9),
+    (39, 'ME201', 'Core', 'ME01', 4, 12),
+    (40, 'ME202', 'Core', 'ME01', 4, 11),
+    (41, 'ME301', 'Elective', 'ME01', 6, 10),
+    (42, 'ME302', 'Elective', 'ME01', 8, 9),
+    (43, 'CE201', 'Core', 'CS01', 4, 12),
+    (44, 'CE202', 'Core', 'IT01', 4, 11),
+    (45, 'CE301', 'Elective', 'CS01', 6, 10),
+    (46, 'CE302', 'Elective', 'IT01', 8, 9);
 
 INSERT INTO ENROLLMENT (enrollment_id, student_id, offering_id, enrollment_date) VALUES
     (1, '23CS01', 1, '2025-08-01'),
@@ -645,7 +689,22 @@ INSERT INTO TA_ASSIGNMENT (ta_id, student_id, faculty_id, term_number, offering_
 INSERT INTO ROOM (room_id, capacity, building) VALUES
     ('R101', 60, 'Main Block'),
     ('LAB-1', 30, 'Innovation Center'),
-    ('R202', 80, 'Academic Block');
+    ('R202', 80, 'Academic Block'),
+    ('R102', 55, 'Main Block'),
+    ('R103', 55, 'Main Block'),
+    ('R104', 70, 'Main Block'),
+    ('R203', 75, 'Academic Block'),
+    ('R204', 75, 'Academic Block'),
+    ('R205', 90, 'Academic Block'),
+    ('LAB-2', 30, 'Innovation Center'),
+    ('LAB-3', 28, 'Innovation Center'),
+    ('LAB-4', 36, 'Innovation Center'),
+    ('AUD-A', 150, 'Central Complex'),
+    ('AUD-B', 200, 'Central Complex'),
+    ('SEM-1', 45, 'Seminar Wing'),
+    ('SEM-2', 45, 'Seminar Wing'),
+    ('SEM-3', 60, 'Seminar Wing'),
+    ('TT-HALL', 120, 'Academic Block');
 
 INSERT INTO TIMETABLE (timetable_id, offering_id, day, start_time, end_time, room_id) VALUES
     (1, 1, 'Mon', '09:00:00', '10:30:00', 'R101'),

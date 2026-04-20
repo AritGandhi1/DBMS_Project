@@ -185,7 +185,12 @@ const AdminUserManagementPage = {
                     <td><input data-student-field="advisorId" data-student-id="${sid}" value="${this.escapeHtml(student.advisorId || "")}" /></td>
                     <td><input data-student-field="currentTermNumber" data-student-id="${sid}" type="number" min="1" value="${this.escapeHtml(student.currentTermNumber || "")}" /></td>
                     <td><input data-student-field="branch" data-student-id="${sid}" value="${this.escapeHtml(student.branch || "")}" /></td>
-                    <td><button class="btn btn-primary" data-student-update="${sid}">Update</button></td>
+                    <td>
+                      <div style="display:flex; gap:8px;">
+                        <button class="btn btn-primary" data-student-update="${sid}" type="button">Update</button>
+                        <button class="btn btn-danger" data-student-delete="${sid}" type="button">Delete</button>
+                      </div>
+                    </td>
                   </tr>
                 `;
               }).join("")}
@@ -232,7 +237,12 @@ const AdminUserManagementPage = {
                     <td><input data-faculty-field="email" data-faculty-id="${fid}" value="${this.escapeHtml(faculty.email || "")}" /></td>
                     <td><input data-faculty-field="phone" data-faculty-id="${fid}" value="${this.escapeHtml(faculty.phone || "")}" /></td>
                     <td><input data-faculty-field="department" data-faculty-id="${fid}" value="${this.escapeHtml(faculty.department || "")}" /></td>
-                    <td><button class="btn btn-primary" data-faculty-update="${fid}">Update</button></td>
+                    <td>
+                      <div style="display:flex; gap:8px;">
+                        <button class="btn btn-primary" data-faculty-update="${fid}" type="button">Update</button>
+                        <button class="btn btn-danger" data-faculty-delete="${fid}" type="button">Delete</button>
+                      </div>
+                    </td>
                   </tr>
                 `;
               }).join("")}
@@ -272,6 +282,24 @@ const AdminUserManagementPage = {
       });
     });
 
+    studentsTableEl.querySelectorAll("button[data-student-delete]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const studentId = button.dataset.studentDelete;
+        const confirmed = window.confirm(`Delete student ${studentId}? This cannot be undone.`);
+        if (!confirmed) {
+          return;
+        }
+
+        try {
+          await API.deleteAdminStudent(studentId);
+          setMessage("success", `Student ${studentId} deleted successfully.`);
+          await load();
+        } catch (error) {
+          setMessage("error", error.message || "Failed to delete student");
+        }
+      });
+    });
+
     facultyTableEl.querySelectorAll("button[data-faculty-update]").forEach((button) => {
       button.addEventListener("click", async () => {
         const facultyId = button.dataset.facultyUpdate;
@@ -292,6 +320,24 @@ const AdminUserManagementPage = {
           await load();
         } catch (error) {
           setMessage("error", error.message);
+        }
+      });
+    });
+
+    facultyTableEl.querySelectorAll("button[data-faculty-delete]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const facultyId = button.dataset.facultyDelete;
+        const confirmed = window.confirm(`Delete faculty ${facultyId}? This cannot be undone.`);
+        if (!confirmed) {
+          return;
+        }
+
+        try {
+          await API.deleteAdminFaculty(facultyId);
+          setMessage("success", `Faculty ${facultyId} deleted successfully.`);
+          await load();
+        } catch (error) {
+          setMessage("error", error.message || "Failed to delete faculty");
         }
       });
     });

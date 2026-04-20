@@ -1,4 +1,7 @@
-const API_BASE_URL = `${window.location.origin}/api`;
+const DEV_FRONTEND_PORTS = new Set(["8080", "3000", "5173"]);
+const API_BASE_URL = DEV_FRONTEND_PORTS.has(window.location.port)
+  ? `${window.location.protocol}//${window.location.hostname}:5000/api`
+  : `${window.location.origin}/api`;
 
 class API {
   static async call(method, endpoint, data = null) {
@@ -22,7 +25,17 @@ class API {
       }
 
       const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-      const json = await response.json();
+      const contentType = response.headers.get("content-type") || "";
+      const rawBody = await response.text();
+
+      let json = {};
+      if (rawBody.trim() !== "" && contentType.includes("application/json")) {
+        try {
+          json = JSON.parse(rawBody);
+        } catch (_) {
+          json = {};
+        }
+      }
 
       if (!response.ok) {
         throw new Error(json.message || "API Error");
@@ -445,6 +458,10 @@ class API {
     return this.call("PUT", "/admin/feedback-status", { feedbackActive: Boolean(feedbackActive) });
   }
 
+  static async getAdminFeedbackList() {
+    return this.call("GET", "/admin/feedback");
+  }
+
   static async getAdminEnrollmentStatus() {
     return this.call("GET", "/admin/enrollment-status");
   }
@@ -465,12 +482,20 @@ class API {
     return this.call("PUT", `/admin/students/${encodeURIComponent(studentId)}`, payload);
   }
 
+  static async deleteAdminStudent(studentId) {
+    return this.call("DELETE", `/admin/students/${encodeURIComponent(studentId)}`);
+  }
+
   static async createAdminFaculty(payload) {
     return this.call("POST", "/admin/faculty", payload);
   }
 
   static async updateAdminFaculty(facultyId, payload) {
     return this.call("PUT", `/admin/faculty/${encodeURIComponent(facultyId)}`, payload);
+  }
+
+  static async deleteAdminFaculty(facultyId) {
+    return this.call("DELETE", `/admin/faculty/${encodeURIComponent(facultyId)}`);
   }
 
   static async uploadAdminStudentsFile(file) {

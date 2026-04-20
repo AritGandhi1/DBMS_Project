@@ -5,15 +5,18 @@ const authenticate = require("../middlewares/auth");
 const {
   getAdminFeedbackStatus,
   updateAdminFeedbackStatus,
+  getAdminFeedbackList,
   getAdminEnrollmentStatus,
   updateAdminEnrollmentStatus,
   endAdminTerm,
   getAdminUserManagement,
   createAdminStudent,
   updateAdminStudent,
+  deleteAdminStudent,
   bulkUploadAdminStudents,
   createAdminFaculty,
   updateAdminFaculty,
+  deleteAdminFaculty,
   bulkUploadAdminFaculty,
   getAdminRooms,
   createAdminRoom,
@@ -32,15 +35,18 @@ const upload = multer({
 router.get("/users", authenticate, getAdminUserManagement);
 router.get("/feedback-status", authenticate, getAdminFeedbackStatus);
 router.put("/feedback-status", authenticate, updateAdminFeedbackStatus);
+router.get("/feedback", authenticate, getAdminFeedbackList);
 router.get("/enrollment-status", authenticate, getAdminEnrollmentStatus);
 router.put("/enrollment-status", authenticate, updateAdminEnrollmentStatus);
 router.post("/end-term", authenticate, endAdminTerm);
 router.post("/students", authenticate, createAdminStudent);
 router.post("/students/bulk-upload", authenticate, upload.single("file"), bulkUploadAdminStudents);
 router.put("/students/:studentId", authenticate, updateAdminStudent);
+router.delete("/students/:studentId", authenticate, deleteAdminStudent);
 router.post("/faculty", authenticate, createAdminFaculty);
 router.post("/faculty/bulk-upload", authenticate, upload.single("file"), bulkUploadAdminFaculty);
 router.put("/faculty/:facultyId", authenticate, updateAdminFaculty);
+router.delete("/faculty/:facultyId", authenticate, deleteAdminFaculty);
 router.get("/rooms", authenticate, getAdminRooms);
 router.post("/rooms", authenticate, createAdminRoom);
 router.put("/rooms/:roomId", authenticate, updateAdminRoom);

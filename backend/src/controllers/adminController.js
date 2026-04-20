@@ -427,6 +427,57 @@ async function updateAdminFeedbackStatus(req, res, next) {
   }
 }
 
+async function getAdminFeedbackList(req, res, next) {
+  try {
+    ensureAdminRole(req);
+
+    const [rows] = await pool.execute(
+      `SELECT
+        fb.feedback_id,
+        fb.student_id,
+        s.name AS student_name,
+        fb.offering_id,
+        c.course_id,
+        c.course_name,
+        co.term_number,
+        co.faculty_id,
+        f.name AS faculty_name,
+        fb.rating,
+        COALESCE(fb.comment, '') AS comment,
+        fb.submitted_on
+       FROM FEEDBACK fb
+       JOIN STUDENT s ON s.student_id = fb.student_id
+       JOIN COURSE_OFFERING co ON co.offering_id = fb.offering_id
+       JOIN COURSE c ON c.course_id = co.course_id
+       LEFT JOIN FACULTY f ON f.faculty_id = co.faculty_id
+       ORDER BY fb.submitted_on DESC, co.term_number DESC, c.course_id ASC, fb.student_id ASC`
+    );
+
+    const feedbacks = rows.map((row) => ({
+      feedbackId: row.feedback_id,
+      studentId: row.student_id,
+      studentName: row.student_name,
+      offeringId: row.offering_id,
+      courseId: row.course_id,
+      courseName: row.course_name,
+      termNumber: row.term_number,
+      facultyId: row.faculty_id,
+      facultyName: row.faculty_name || "Unassigned",
+      rating: Number(row.rating || 0),
+      comment: row.comment || "",
+      submittedOn: row.submitted_on
+    }));
+
+    res.status(200).json({
+      message: "Admin feedback list retrieved",
+      total: feedbacks.length,
+      feedbacks
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function getAdminEnrollmentStatus(req, res, next) {
   try {
     ensureAdminRole(req);
@@ -613,6 +664,37 @@ async function updateAdminStudent(req, res, next) {
     res.status(200).json({
       message: "Student updated successfully",
       studentId: currentStudentId
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function deleteAdminStudent(req, res, next) {
+  try {
+    ensureAdminRole(req);
+
+    const studentId = String(req.params.studentId || "").trim();
+    if (!studentId) {
+      const error = new Error("studentId is required in path");
+      error.status = 400;
+      throw error;
+    }
+
+    const [result] = await pool.execute(
+      `DELETE FROM STUDENT WHERE student_id = ?`,
+      [studentId]
+    );
+
+    if (result.affectedRows === 0) {
+      const error = new Error("Student not found");
+      error.status = 404;
+      throw error;
+    }
+
+    res.status(200).json({
+      message: "Student deleted successfully",
+      studentId
     });
   } catch (error) {
     next(error);
@@ -918,6 +1000,37 @@ async function updateAdminFaculty(req, res, next) {
   }
 }
 
+async function deleteAdminFaculty(req, res, next) {
+  try {
+    ensureAdminRole(req);
+
+    const facultyId = String(req.params.facultyId || "").trim();
+    if (!facultyId) {
+      const error = new Error("facultyId is required in path");
+      error.status = 400;
+      throw error;
+    }
+
+    const [result] = await pool.execute(
+      `DELETE FROM FACULTY WHERE faculty_id = ?`,
+      [facultyId]
+    );
+
+    if (result.affectedRows === 0) {
+      const error = new Error("Faculty not found");
+      error.status = 404;
+      throw error;
+    }
+
+    res.status(200).json({
+      message: "Faculty deleted successfully",
+      facultyId
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function endAdminTerm(req, res, next) {
   try {
     ensureAdminRole(req);
@@ -934,6 +1047,7 @@ async function endAdminTerm(req, res, next) {
 
       let gpaUpdatedCount = 0;
       let termIncrementedCount = 0;
+      let graduatedCount = 0;
 
       for (const student of studentRows) {
         const studentId = student.student_id;
@@ -991,6 +1105,15 @@ async function endAdminTerm(req, res, next) {
           );
 
           termIncrementedCount += 1;
+        } else if (currentTermNumber === 8) {
+          await connection.execute(
+            `UPDATE STUDENT
+             SET current_term_number = 9
+             WHERE student_id = ?`,
+            [studentId]
+          );
+
+          graduatedCount += 1;
         }
       }
 
@@ -1007,6 +1130,7 @@ async function endAdminTerm(req, res, next) {
         studentsProcessed: studentRows.length,
         gpaUpdatedCount,
         termIncrementedCount,
+        graduatedCount,
         cleared: {
           courseOfferings: true,
           feedback: true,
@@ -1029,15 +1153,18 @@ async function endAdminTerm(req, res, next) {
 module.exports = {
   getAdminFeedbackStatus,
   updateAdminFeedbackStatus,
+  getAdminFeedbackList,
   getAdminEnrollmentStatus,
   updateAdminEnrollmentStatus,
   endAdminTerm,
   getAdminUserManagement,
   createAdminStudent,
   updateAdminStudent,
+  deleteAdminStudent,
   bulkUploadAdminStudents,
   createAdminFaculty,
   updateAdminFaculty,
+  deleteAdminFaculty,
   bulkUploadAdminFaculty,
   getAdminRooms,
   createAdminRoom,

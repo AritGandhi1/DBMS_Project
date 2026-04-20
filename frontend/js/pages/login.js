@@ -17,9 +17,6 @@ const LoginPage = {
               <input type="password" id="password" required placeholder="Enter password">
             </div>
             <button type="submit" class="btn btn-primary" style="width: 100%;">Login</button>
-            <div class="form-link">
-              Don't have an account? <a href="#/register">Register</a>
-            </div>
           </form>
           <div id="loginMessage"></div>
         </div>
